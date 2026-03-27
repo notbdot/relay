@@ -193,7 +193,7 @@ func (mgr *Manager) parseLine(line string, connected *bool, streamIDChecked *boo
 	if !*streamIDChecked {
 		if m := streamIDRe.FindStringSubmatch(line); m != nil {
 			*streamIDChecked = true
-			incomingID := m[1]
+			incomingID := strings.Trim(m[1], "[],'\" \t")
 			streamKey := mgr.getStreamKey()
 			if streamKey != "" && incomingID != streamKey {
 				log.Printf("ingest: rejected connection — wrong stream ID %q (expected %q)", incomingID, streamKey)
