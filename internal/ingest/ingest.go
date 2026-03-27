@@ -195,12 +195,18 @@ func (mgr *Manager) parseLine(line string, connected *bool, streamIDChecked *boo
 	if !*streamIDChecked {
 		if m := streamIDRe.FindStringSubmatch(line); m != nil {
 			*streamIDChecked = true
-			raw := strings.Trim(m[1], "[],'\" \t")
+			raw := strings.TrimLeft(m[1], "[],'\" \t")
 			// SRT ACL format: "#!::r=STREAMKEY,h=hostname" — extract the r= field
 			incomingID := raw
 			if acl := srtACLRe.FindStringSubmatch(raw); acl != nil {
 				incomingID = acl[1]
+			} else {
+				// Strip trailing metadata after the key: "], length 14" or ", extra"
+				if i := strings.IndexAny(incomingID, "],"); i >= 0 {
+					incomingID = incomingID[:i]
+				}
 			}
+			incomingID = strings.TrimRight(incomingID, "'\" \t")
 			streamKey := mgr.getStreamKey()
 			if streamKey != "" && incomingID != streamKey {
 				log.Printf("ingest: rejected connection — wrong stream ID %q (expected %q)", incomingID, streamKey)
