@@ -86,44 +86,6 @@
   }
   #offline-overlay.hidden { opacity: 0; pointer-events: none; }
 
-  /* === Scene overlay === */
-  #scene-overlay {
-    position: absolute;
-    inset: 0;
-    z-index: 5;
-    opacity: 1;
-    transition: opacity 350ms ease;
-  }
-  #scene-overlay.hidden { opacity: 0; pointer-events: none; }
-
-  #scene-video {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    filter: brightness(0.55);
-  }
-
-  #scene-content {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  #scene-label {
-    font-size: 2rem;
-    font-weight: 600;
-    color: rgba(255,255,255,0.92);
-    letter-spacing: -0.02em;
-    text-shadow: 0 2px 20px rgba(0,0,0,0.5);
-    padding: 16px 28px;
-    background: rgba(0,0,0,0.25);
-    border-radius: 10px;
-  }
-
   #offline-label {
     color: #555;
     font-size: 0.8rem;
@@ -176,6 +138,7 @@
     flex-shrink: 0;
   }
 
+  /* === Sync button === */
   #sync-btn {
     display: none;
     background: none;
@@ -192,6 +155,52 @@
   }
   #sync-btn:hover { color: var(--accent); border-color: var(--accent); }
   #sync-btn.visible { display: block; }
+
+  /* === Quality picker === */
+  #quality-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+  #quality-btn {
+    display: none;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    padding: 3px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: color 200ms, border-color 200ms;
+  }
+  #quality-btn:hover { color: var(--accent); border-color: var(--accent); }
+  #quality-btn.visible { display: block; }
+
+  #quality-menu {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    right: 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    min-width: 130px;
+    z-index: 50;
+  }
+  #quality-menu.hidden { display: none; }
+
+  .quality-option {
+    padding: 8px 14px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    color: var(--muted);
+    transition: background 150ms, color 150ms;
+    font-family: inherit;
+  }
+  .quality-option:hover { background: var(--surface2); color: var(--fg); }
+  .quality-option.active { color: var(--accent); font-weight: 500; }
 
   /* === Chat panel === */
   #chat-panel {
@@ -418,19 +427,16 @@
         </svg>
         <span id="offline-label">Stream offline</span>
       </div>
-      <div id="scene-overlay" class="hidden">
-        <video id="scene-video" autoplay muted loop playsinline></video>
-        <div id="scene-content">
-          <div id="scene-label"></div>
-        </div>
-      </div>
     </div>
-    <audio id="scene-audio" loop></audio>
     <div id="stream-meta">
       <div id="live-dot"></div>
       <div id="stream-title">Loading...</div>
       <div id="viewer-count"></div>
       <button id="sync-btn" title="Sync to live edge">↺ Live</button>
+      <div id="quality-wrap">
+        <button id="quality-btn" title="Quality">⚙ Auto</button>
+        <div id="quality-menu" class="hidden"></div>
+      </div>
     </div>
   </div>
 
@@ -490,73 +496,6 @@
     usernameField.select();
   });
 
-  // --- Scene ---
-  const BUILT_IN_AERIALS = [
-    'https://sylvan.apple.com/Aerials/2x/Videos/comp_GL_G010_C006_v09_6Mbps.mov',
-    'https://sylvan.apple.com/Aerials/2x/Videos/comp_A068_C012_12130B_v09_SDR_PS_20180925_SDR_2K_HEVC.mov',
-    'https://sylvan.apple.com/Aerials/2x/Videos/comp_DB_D011_C009_v07_6Mbps.mov',
-    'https://sylvan.apple.com/Aerials/2x/Videos/comp_GL_G004_C010_v25_SDR_PS_20180925_SDR_2K_HEVC.mov',
-    'https://sylvan.apple.com/Aerials/2x/Videos/comp_GMT301_162NC_139M_1005_KOREA_NIGHT_v14_SDR_PS_20190812_SDR_2K_HEVC.mov',
-  ];
-
-  let customAerials = [];
-  let sceneMusicUrls = { starting_soon: '', brb: '', ending: '' };
-  let currentScene = 'live';
-
-  const sceneOverlay = document.getElementById('scene-overlay');
-  const sceneVideo   = document.getElementById('scene-video');
-  const sceneLabel   = document.getElementById('scene-label');
-  const sceneAudio   = document.getElementById('scene-audio');
-
-  function getAerialList() {
-    return customAerials.length > 0 ? customAerials : BUILT_IN_AERIALS;
-  }
-
-  function applyScene(scene) {
-    if (scene === currentScene) return;
-    currentScene = scene;
-    if (scene === 'live') {
-      sceneOverlay.classList.add('hidden');
-      sceneAudio.pause();
-    } else {
-      sceneOverlay.classList.remove('hidden');
-      offlineOverlay.classList.add('hidden');
-      if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
-
-      const LABELS = { starting_soon: 'Starting Soon', brb: 'Be Right Back', ending: 'Thank You for Watching' };
-      sceneLabel.textContent = LABELS[scene] || '';
-
-      const urls = getAerialList();
-      const pick = urls[Math.floor(Math.random() * urls.length)];
-      if (sceneVideo.getAttribute('src') !== pick) {
-        sceneVideo.src = pick;
-      }
-      sceneVideo.play().catch(() => {});
-
-      const musicUrl = sceneMusicUrls[scene] || '';
-      if (musicUrl && sceneAudio.getAttribute('src') !== musicUrl) {
-        sceneAudio.src = musicUrl;
-        sceneAudio.play().catch(() => {});
-      } else if (musicUrl) {
-        sceneAudio.play().catch(() => {});
-      } else {
-        sceneAudio.pause();
-      }
-    }
-  }
-
-  // Load scene music URLs and custom screensaver list
-  fetch('/api/admin/config').then(r => r.json()).then(d => {
-    sceneMusicUrls = {
-      starting_soon: d.music_starting_soon || '',
-      brb:           d.music_brb || '',
-      ending:        d.music_ending || '',
-    };
-    if (d.screensaver_urls) {
-      customAerials = d.screensaver_urls.split('\n').map(s => s.trim()).filter(Boolean);
-    }
-  }).catch(() => {});
-
   // --- Player ---
   const video = document.getElementById('video');
   const offlineOverlay = document.getElementById('offline-overlay');
@@ -572,7 +511,10 @@
       hlsInstance = new Hls({ liveSyncDurationCount: 3, liveMaxLatencyDurationCount: 6, enableWorker: true, lowLatencyMode: true });
       hlsInstance.loadSource(src);
       hlsInstance.attachMedia(video);
-      hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+      hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+        video.play().catch(() => {});
+        buildQualityMenu();
+      });
       hlsInstance.on(Hls.Events.ERROR, (e, d) => { if (d.fatal && d.type === Hls.ErrorTypes.NETWORK_ERROR) setTimeout(startPlayer, 5000); });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       video.src = src;
@@ -585,20 +527,66 @@
       offlineOverlay.classList.add('hidden');
       liveDot.classList.add('live');
       document.getElementById('sync-btn').classList.add('visible');
+      document.getElementById('quality-btn').classList.add('visible');
       if (!hlsInstance) startPlayer();
     } else {
       offlineOverlay.classList.remove('hidden');
       liveDot.classList.remove('live');
       document.getElementById('sync-btn').classList.remove('visible');
+      document.getElementById('quality-btn').classList.remove('visible');
+      document.getElementById('quality-menu').classList.add('hidden');
       if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
     }
     if (title) { streamTitle.textContent = title; document.title = (online ? '● ' : '') + title; }
   }
 
+  // --- Quality picker ---
+  const qualityBtn  = document.getElementById('quality-btn');
+  const qualityMenu = document.getElementById('quality-menu');
+
+  function buildQualityMenu() {
+    qualityMenu.innerHTML = '';
+    const levels = hlsInstance ? hlsInstance.levels : [];
+    const current = hlsInstance ? hlsInstance.currentLevel : -1;
+
+    const makeOpt = (label, level) => {
+      const el = document.createElement('div');
+      el.className = 'quality-option' + (current === level ? ' active' : '');
+      el.textContent = label;
+      el.addEventListener('click', () => {
+        if (hlsInstance) hlsInstance.currentLevel = level;
+        qualityBtn.textContent = '⚙ ' + label;
+        qualityMenu.classList.add('hidden');
+        buildQualityMenu();
+      });
+      qualityMenu.appendChild(el);
+    };
+
+    makeOpt('Auto', -1);
+    levels.forEach((lvl, i) => {
+      const label = lvl.height ? lvl.height + 'p' : Math.round(lvl.bitrate / 1000) + 'k';
+      makeOpt(label, i);
+    });
+  }
+
+  qualityBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    buildQualityMenu();
+    qualityMenu.classList.toggle('hidden');
+  });
+  document.addEventListener('click', () => qualityMenu.classList.add('hidden'));
+
+  // --- Sync button ---
+  document.getElementById('sync-btn').addEventListener('click', () => {
+    if (!hlsInstance || !video) return;
+    const edge = hlsInstance.liveSyncPosition;
+    if (edge != null) video.currentTime = edge;
+    else video.currentTime = Math.max(0, video.duration - 1);
+  });
+
+  // --- Initial status fetch ---
   fetch('/api/status').then(r => r.json()).then(d => {
-    const scene = d.scene || 'live';
-    applyScene(scene);
-    if (scene === 'live') setStreamOnline(d.online, d.title);
+    setStreamOnline(d.online, d.title);
     if (d.viewer_count > 0) viewerCount.textContent = d.viewer_count + ' watching';
   }).catch(() => {});
 
@@ -629,13 +617,9 @@
   }
 
   function handleStatus(p) {
-    const scene = p.scene || 'live';
-    applyScene(scene);
+    setStreamOnline(p.online, p.title);
     viewerCount.textContent = p.viewer_count > 0 ? p.viewer_count + ' watching' : '';
-    if (scene === 'live') {
-      setStreamOnline(p.online, p.title);
-      if (p.online && !hlsInstance) startPlayer();
-    }
+    if (p.online && !hlsInstance) startPlayer();
   }
 
   // --- Chat ---
@@ -683,14 +667,6 @@
     const el = chatMessages.querySelector(`.chat-msg[data-id="${id}"]`);
     if (el) el.remove();
   }
-
-  // --- Sync button ---
-  document.getElementById('sync-btn').addEventListener('click', () => {
-    if (!hlsInstance || !video) return;
-    const edge = hlsInstance.liveSyncPosition;
-    if (edge != null) video.currentTime = edge;
-    else video.currentTime = Math.max(0, video.duration - 1);
-  });
 
   // --- Chat form ---
   const chatForm = document.getElementById('chat-form');
