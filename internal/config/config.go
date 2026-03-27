@@ -41,7 +41,7 @@ type FFmpegConfig struct {
 
 func Load(path string) (*Config, error) {
 	cfg := &Config{
-		Server: ServerConfig{Host: "0.0.0.0", Port: 8080},
+		Server: ServerConfig{Host: "0.0.0.0", Port: 2935},
 		SRT:    SRTConfig{Port: 9999},
 		HLS: HLSConfig{
 			SegmentsDir: "./segments",

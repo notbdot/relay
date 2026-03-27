@@ -66,16 +66,16 @@ func runServe() {
 		log.Fatalf("db init: %v", err)
 	}
 
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	if isNew {
-		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 		fmt.Println("  First run — credentials generated")
 		fmt.Printf("  Stream key  : %s\n", streamKey)
 		fmt.Printf("  Admin token : %s\n", adminToken)
-		fmt.Printf("  Admin URL   : http://localhost:%d/admin?token=%s\n", cfg.Server.Port, adminToken)
-		fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	} else {
-		log.Printf("admin URL: http://localhost:%d/admin", cfg.Server.Port)
 	}
+	fmt.Printf("  Viewer  → http://localhost:%d/\n", cfg.Server.Port)
+	fmt.Printf("  Admin   → http://localhost:%d/admin?token=%s\n", cfg.Server.Port, adminToken)
+	fmt.Printf("  SRT in  → srt://localhost:%d  (passphrase = stream key)\n", cfg.SRT.Port)
+	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
@@ -119,8 +119,6 @@ func runServe() {
 		AdminHTML:   web.AdminHTML,
 	})
 
-	log.Printf("SRT ingest on :%d | HTTP on %s", cfg.SRT.Port, addr)
-
 	if err := srv.Start(ctx); err != nil && err.Error() != "http: Server closed" {
 		log.Printf("server: %v", err)
 	}
@@ -144,6 +142,6 @@ func runResetAdminToken() {
 		log.Fatalf("regenerate: %v", err)
 	}
 
-	fmt.Printf("New admin token: %s\n", token)
-	fmt.Printf("Admin URL: http://localhost:%d/admin?token=%s\n", cfg.Server.Port, token)
+	fmt.Printf("New admin token : %s\n", token)
+	fmt.Printf("Admin URL       : http://localhost:%d/admin?token=%s\n", cfg.Server.Port, token)
 }
