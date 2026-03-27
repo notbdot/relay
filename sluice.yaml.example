@@ -1,0 +1,24 @@
+# Sluice configuration example
+# Copy to sluice.yaml and edit as needed.
+# Environment variables take precedence over file values.
+
+server:
+  host: "0.0.0.0"
+  port: 8080          # SLUICE_SERVER_PORT
+
+srt:
+  port: 9999          # SLUICE_SRT_PORT
+  # OBS setup: Server = srt://yourhost:9999
+  # Set the stream key as the SRT passphrase in OBS advanced settings.
+
+hls:
+  segments_dir: "./segments"  # SLUICE_SEGMENTS_DIR
+  hls_time: 2                 # segment duration in seconds
+  hls_list_size: 6            # segments in playlist
+
+db:
+  path: "./sluice.json"       # SLUICE_DB_PATH
+
+ffmpeg:
+  path: "ffmpeg"              # SLUICE_FFMPEG_PATH
+  extra_flags: ""             # e.g. "-vf scale=1280:720"

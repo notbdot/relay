@@ -1,0 +1,15 @@
+# Build artifacts
+sluice
+sluice-*
+
+# Runtime data
+sluice.json
+sluice.yaml
+segments/*.m3u8
+segments/*.ts
+
+# Keep segments directory
+!segments/.gitkeep
+
+# OS
+.DS_Store
