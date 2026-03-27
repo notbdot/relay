@@ -159,7 +159,7 @@ func (d *DB) InitDefaults() (streamKey, adminToken string, isNew bool, err error
 	if streamKey == "" || adminToken == "" {
 		isNew = true
 		if streamKey == "" {
-			streamKey = randomHex(16)
+			streamKey = randomKey()
 			d.data.Config["stream_key"] = streamKey
 		}
 		if adminToken == "" {
@@ -382,6 +382,26 @@ func (d *DB) UpdateSessionPeakViewers(id int64, peak int) error {
 		}
 	}
 	return d.save()
+}
+
+// randomKey generates a short, easy-to-type stream key like "A3KF-9XM2-P7BV".
+// Uses Crockford-style charset (no 0/O, 1/I/L ambiguity).
+func randomKey() string {
+	const chars = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
+	b := make([]byte, 12)
+	if _, err := rand.Read(b); err != nil {
+		panic(fmt.Sprintf("randomKey: %v", err))
+	}
+	out := make([]byte, 14) // 12 chars + 2 dashes
+	for i, j := 0, 0; i < 12; i++ {
+		out[j] = chars[int(b[i])%len(chars)]
+		j++
+		if i == 3 || i == 7 {
+			out[j] = '-'
+			j++
+		}
+	}
+	return string(out)
 }
 
 func randomHex(n int) string {

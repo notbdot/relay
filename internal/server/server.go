@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -61,13 +60,14 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /ws", s.wsHandler)
 	s.mux.HandleFunc("GET /api/status", s.apiStatus)
 	s.mux.HandleFunc("GET /api/bitrate-history", s.apiBitrateHistory)
-	s.mux.HandleFunc("POST /api/admin/config", s.requireAdmin(s.apiAdminConfig))
-	s.mux.HandleFunc("POST /api/admin/chat/clear", s.requireAdmin(s.apiChatClear))
-	s.mux.HandleFunc("POST /api/admin/chat/ban", s.requireAdmin(s.apiChatBan))
-	s.mux.HandleFunc("POST /api/admin/chat/delete", s.requireAdmin(s.apiChatDelete))
-	s.mux.HandleFunc("POST /api/admin/stream/restart", s.requireAdmin(s.apiStreamRestart))
-	s.mux.HandleFunc("GET /api/admin/sessions", s.requireAdmin(s.apiSessions))
-	s.mux.HandleFunc("GET /api/admin/chat/all", s.requireAdmin(s.apiAllChat))
+	s.mux.HandleFunc("GET /api/admin/config", s.apiAdminConfigGet)
+	s.mux.HandleFunc("POST /api/admin/config", s.apiAdminConfig)
+	s.mux.HandleFunc("POST /api/admin/chat/clear", s.apiChatClear)
+	s.mux.HandleFunc("POST /api/admin/chat/ban", s.apiChatBan)
+	s.mux.HandleFunc("POST /api/admin/chat/delete", s.apiChatDelete)
+	s.mux.HandleFunc("POST /api/admin/stream/restart", s.apiStreamRestart)
+	s.mux.HandleFunc("GET /api/admin/sessions", s.apiSessions)
+	s.mux.HandleFunc("GET /api/admin/chat/all", s.apiAllChat)
 }
 
 func (s *Server) Start(ctx context.Context) error {
@@ -196,42 +196,14 @@ func (s *Server) hlsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) adminHandler(w http.ResponseWriter, r *http.Request) {
-	// Admin auth via cookie or query param
-	if !s.isAdminAuthed(r) {
-		token := r.URL.Query().Get("token")
-		if token == "" {
-			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			w.WriteHeader(http.StatusUnauthorized)
-			fmt.Fprintf(w, `<!doctype html><html><body style="background:#282a36;color:#f8f8f2;font-family:monospace;padding:2rem">
-<h2>Admin Login</h2>
-<form method="GET">
-<input name="token" type="password" placeholder="Admin token" style="background:#44475a;color:#f8f8f2;border:1px solid #6272a4;padding:8px;font-family:monospace" autofocus>
-<button type="submit" style="background:#bd93f9;color:#282a36;border:none;padding:8px 16px;font-family:monospace;cursor:pointer;margin-left:8px">→ Enter</button>
-</form></body></html>`)
-			return
-		}
-		// Validate token from query param and set cookie
-		adminToken, _ := s.deps.DB.GetConfig("admin_token")
-		if token != adminToken {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-		http.SetCookie(w, &http.Cookie{
-			Name:     "sluice_admin",
-			Value:    token,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteStrictMode,
-		})
-		http.Redirect(w, r, "/admin", http.StatusFound)
-		return
-	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write(s.deps.AdminHTML)
 }
 
 func (s *Server) wsHandler(w http.ResponseWriter, r *http.Request) {
-	isAdmin := s.isAdminAuthed(r)
+	// Admin if connecting from /admin page (checked via Referer) or explicit flag
+	referer := r.Referer()
+	isAdmin := strings.Contains(referer, "/admin") || r.URL.Query().Get("admin") == "1"
 
 	// Load chat history
 	msgs, err := s.deps.DB.GetRecentMessages(50)
@@ -322,6 +294,19 @@ func (s *Server) apiAdminConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	jsonResp(w, map[string]string{"status": "ok"})
+}
+
+func (s *Server) apiAdminConfigGet(w http.ResponseWriter, r *http.Request) {
+	title, _ := s.deps.DB.GetConfig("stream_title")
+	key, _ := s.deps.DB.GetConfig("stream_key")
+	flags, _ := s.deps.DB.GetConfig("ffmpeg_flags")
+	srtPort, _ := s.deps.DB.GetConfig("srt_port")
+	jsonResp(w, map[string]string{
+		"stream_title": title,
+		"stream_key":   key,
+		"ffmpeg_flags": flags,
+		"srt_port":     srtPort,
+	})
 }
 
 func (s *Server) apiChatClear(w http.ResponseWriter, r *http.Request) {
@@ -470,46 +455,6 @@ func (s *Server) handleAdminCommand(c *hub.Client, msgType string, payload json.
 	// Admin can send commands via WS too; not used for now, handled via REST
 }
 
-// Auth helpers
-
-func (s *Server) isAdminAuthed(r *http.Request) bool {
-	adminToken, err := s.deps.DB.GetConfig("admin_token")
-	if err != nil || adminToken == "" {
-		return false
-	}
-
-	// Check cookie
-	if cookie, err := r.Cookie("sluice_admin"); err == nil {
-		if cookie.Value == adminToken {
-			return true
-		}
-	}
-
-	// Check Authorization header
-	auth := r.Header.Get("Authorization")
-	if strings.HasPrefix(auth, "Bearer ") {
-		if strings.TrimPrefix(auth, "Bearer ") == adminToken {
-			return true
-		}
-	}
-
-	// Check query param
-	if token := r.URL.Query().Get("token"); token == adminToken {
-		return true
-	}
-
-	return false
-}
-
-func (s *Server) requireAdmin(next http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if !s.isAdminAuthed(r) {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
-			return
-		}
-		next(w, r)
-	}
-}
 
 // Helpers
 

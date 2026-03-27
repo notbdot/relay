@@ -333,7 +333,7 @@
           <div class="field-group">
             <label class="field-label">Stream Key (SRT passphrase)</label>
             <div class="field-row">
-              <input class="field-input key-mask" id="cfg-key" type="password" placeholder="••••••••••••">
+              <input class="field-input key-mask" id="cfg-key" type="text" placeholder="XXXX-XXXX-XXXX" spellcheck="false" autocomplete="off">
               <button class="reveal-btn" id="reveal-key-btn">Reveal</button>
               <button class="regen-btn" id="regen-key-btn">Regen</button>
             </div>
@@ -391,8 +391,7 @@
 
   function connectWS() {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const token = getCookie('sluice_admin');
-    ws = new WebSocket(`${proto}://${location.host}/ws?token=${encodeURIComponent(token)}&username=admin`);
+    ws = new WebSocket(`${proto}://${location.host}/ws?admin=1&username=%5Badmin%5D`);
 
     ws.addEventListener('message', function(e) {
       try { handleMsg(JSON.parse(e.data)); } catch(_) {}
@@ -401,11 +400,6 @@
       wsReconnect = setTimeout(connectWS, 3000);
     });
     ws.addEventListener('error', function() { ws.close(); });
-  }
-
-  function getCookie(name) {
-    const v = document.cookie.split(';').find(c => c.trim().startsWith(name + '='));
-    return v ? v.trim().slice(name.length + 1) : '';
   }
 
   connectWS();
@@ -623,25 +617,26 @@
   const cfgKey = document.getElementById('cfg-key');
   const cfgFFmpeg = document.getElementById('cfg-ffmpeg');
 
-  // Load current config
-  fetch('/api/status').then(r => r.json()).then(d => {
-    if (d.title) cfgTitle.value = d.title;
+  // Load current config (title, stream key, ffmpeg flags)
+  fetch('/api/admin/config').then(r => r.json()).then(d => {
+    if (d.stream_title) cfgTitle.value = d.stream_title;
+    if (d.stream_key)   cfgKey.value = d.stream_key;
+    if (d.ffmpeg_flags) cfgFFmpeg.value = d.ffmpeg_flags;
   }).catch(() => {});
 
   document.getElementById('reveal-key-btn').addEventListener('click', function() {
-    if (cfgKey.type === 'password') {
+    if (cfgKey.type === 'text') {
+      cfgKey.type = 'password';
+      this.textContent = 'Show';
+    } else {
       cfgKey.type = 'text';
       this.textContent = 'Hide';
-    } else {
-      cfgKey.type = 'password';
-      this.textContent = 'Reveal';
     }
   });
 
   document.getElementById('regen-key-btn').addEventListener('click', function() {
     if (!confirm('Regenerate stream key? Current streamers will be disconnected.')) return;
-    const newKey = randomHex(16);
-    cfgKey.value = newKey;
+    cfgKey.value = randomReadableKey();
     cfgKey.type = 'text';
     document.getElementById('reveal-key-btn').textContent = 'Hide';
   });
@@ -708,10 +703,17 @@
     });
   }
 
-  function randomHex(n) {
-    const arr = new Uint8Array(n);
+  // Generates a readable key like "A3KF-9XM2-P7BV" (Crockford charset, no 0/O/1/I/L)
+  function randomReadableKey() {
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const arr = new Uint8Array(12);
     crypto.getRandomValues(arr);
-    return Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
+    let out = '';
+    for (let i = 0; i < 12; i++) {
+      out += chars[arr[i] % chars.length];
+      if (i === 3 || i === 7) out += '-';
+    }
+    return out;
   }
 
   drawSparkline();
