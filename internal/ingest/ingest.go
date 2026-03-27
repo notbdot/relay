@@ -47,6 +47,10 @@ type Manager struct {
 	cancel      context.CancelFunc
 	statsAtomic atomic.Pointer[Stats]
 
+	// progress tracking — only written from the scanner goroutine
+	progKB   float64
+	progTime time.Time
+
 	StatusCh chan StatusChange
 }
 
@@ -147,7 +151,11 @@ func scanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	return 0, nil, nil
 }
 
-var bitrateRe   = regexp.MustCompile(`bitrate=\s*([\d.]+)\s*kbits/s`)
+// bitrateRe matches when FFmpeg knows the output bitrate directly (encoding mode).
+var bitrateRe = regexp.MustCompile(`bitrate=\s*([\d.]+)\s*kbits/s`)
+// sizeRe matches the cumulative bytes-written counter in the FFmpeg progress line.
+// For HLS stream-copy, bitrate=N/A but size still increments — we derive kbps from the rate.
+var sizeRe    = regexp.MustCompile(`(?:L?size)=\s*(\d+)kB`)
 var connectedRe = regexp.MustCompile(`Input #0|SRT source opened|Opening .* for reading|SRT connection.*succeed|Stream #0:`)
 // SRT stream ID in FFmpeg verbose logs: "Stream-ID: 'value'" or "streamid: value"
 var streamIDRe  = regexp.MustCompile(`(?i)stream.?id[=:\s]+'?([^'\n]+?)'?\s*$`)
@@ -300,15 +308,34 @@ func (mgr *Manager) parseLine(line string, connected *bool, streamIDChecked *boo
 		}
 	}
 
-	if matches := bitrateRe.FindStringSubmatch(line); matches != nil {
-		if v, err := strconv.ParseFloat(matches[1], 64); err == nil {
-			old := mgr.statsAtomic.Load()
-			if old != nil && old.Online {
-				updated := *old
-				updated.CurrentKbps = v
-				mgr.statsAtomic.Store(&updated)
-			}
+	// Try direct bitrate field first (available when transcoding).
+	// Fall back to deriving kbps from the rate of cumulative size increase
+	// (works for stream-copy HLS where FFmpeg reports bitrate=N/A).
+	if m := bitrateRe.FindStringSubmatch(line); m != nil {
+		if v, err := strconv.ParseFloat(m[1], 64); err == nil && v > 0 {
+			mgr.setKbps(v)
 		}
+	} else if m := sizeRe.FindStringSubmatch(line); m != nil {
+		if kb, err := strconv.ParseFloat(m[1], 64); err == nil {
+			now := time.Now()
+			if !mgr.progTime.IsZero() && kb > mgr.progKB {
+				dt := now.Sub(mgr.progTime).Seconds()
+				if dt > 0.05 {
+					mgr.setKbps((kb - mgr.progKB) * 8 / dt)
+				}
+			}
+			mgr.progKB = kb
+			mgr.progTime = now
+		}
+	}
+}
+
+func (mgr *Manager) setKbps(v float64) {
+	old := mgr.statsAtomic.Load()
+	if old != nil && old.Online {
+		updated := *old
+		updated.CurrentKbps = v
+		mgr.statsAtomic.Store(&updated)
 	}
 }
 
