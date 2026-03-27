@@ -99,18 +99,17 @@ func (mgr *Manager) Start(ctx context.Context) {
 	}
 }
 
-var bitrateRe = regexp.MustCompile(`bitrate=\s*([\d.]+)\s*kbits/s`)
+var bitrateRe   = regexp.MustCompile(`bitrate=\s*([\d.]+)\s*kbits/s`)
 var connectedRe = regexp.MustCompile(`Input #0|SRT source opened|Opening .* for reading`)
+// SRT stream ID appears in FFmpeg logs as: "Stream-ID: 'value'" or "streamid: value"
+var streamIDRe  = regexp.MustCompile(`(?i)stream.?id[=:\s]+'?([^'\s]+)'?`)
 
 func (mgr *Manager) runFFmpeg(ctx context.Context) {
-	streamKey := mgr.getStreamKey()
-
+	// Listen without passphrase — authenticate via SRT stream ID instead.
+	// Clients should put the stream key in the "Stream ID" field.
 	srtURL := fmt.Sprintf("srt://0.0.0.0:%d?mode=listener", mgr.srtPort)
-	if streamKey != "" {
-		srtURL = fmt.Sprintf("srt://0.0.0.0:%d?mode=listener&passphrase=%s", mgr.srtPort, streamKey)
-	}
 
-	playlist := filepath.Join(mgr.segmentsDir, "live.m3u8")
+	playlist  := filepath.Join(mgr.segmentsDir, "live.m3u8")
 	segPattern := filepath.Join(mgr.segmentsDir, "live%03d.ts")
 
 	extraFlags := mgr.extraFlags
@@ -122,6 +121,7 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 
 	args := []string{
 		"-y",
+		"-loglevel", "verbose",
 		"-i", srtURL,
 		"-c:v", "copy",
 		"-c:a", "aac",
@@ -133,10 +133,8 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 	}
 
 	if extraFlags != "" {
-		parts := strings.Fields(extraFlags)
-		args = append(args, parts...)
+		args = append(args, strings.Fields(extraFlags)...)
 	}
-
 	args = append(args, playlist)
 
 	cmdCtx, cancel := context.WithCancel(ctx)
@@ -161,12 +159,13 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 	log.Printf("ingest: FFmpeg pid=%d started, waiting for SRT connection...", cmd.Process.Pid)
 
 	connected := false
+	streamIDChecked := false
 
 	go func() {
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
 			line := scanner.Text()
-			mgr.parseLine(line, &connected)
+			mgr.parseLine(line, &connected, &streamIDChecked, cancel)
 		}
 	}()
 
@@ -189,15 +188,26 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 	mgr.mu.Unlock()
 }
 
-func (mgr *Manager) parseLine(line string, connected *bool) {
-	log.Printf("ffmpeg: %s", line)
+func (mgr *Manager) parseLine(line string, connected *bool, streamIDChecked *bool, cancel context.CancelFunc) {
+	// Validate stream ID on first connection before accepting the stream.
+	if !*streamIDChecked {
+		if m := streamIDRe.FindStringSubmatch(line); m != nil {
+			*streamIDChecked = true
+			incomingID := m[1]
+			streamKey := mgr.getStreamKey()
+			if streamKey != "" && incomingID != streamKey {
+				log.Printf("ingest: rejected connection — wrong stream ID %q (expected %q)", incomingID, streamKey)
+				cancel()
+				return
+			}
+			log.Printf("ingest: stream ID accepted: %q", incomingID)
+		}
+	}
+
 	if !*connected {
 		if connectedRe.MatchString(line) {
 			*connected = true
-			s := &Stats{
-				Online:    true,
-				StartedAt: time.Now(),
-			}
+			s := &Stats{Online: true, StartedAt: time.Now()}
 			mgr.statsAtomic.Store(s)
 			log.Printf("ingest: stream connected")
 			select {
@@ -254,15 +264,3 @@ func (mgr *Manager) UptimeSeconds() int64 {
 	}
 	return int64(time.Since(s.StartedAt).Seconds())
 }
-
-// parseLine is also used from io.Reader for testing
-func ParseStderrLine(line string) (kbps float64, isConnected bool) {
-	if connectedRe.MatchString(line) {
-		isConnected = true
-	}
-	if matches := bitrateRe.FindStringSubmatch(line); matches != nil {
-		kbps, _ = strconv.ParseFloat(matches[1], 64)
-	}
-	return
-}
-

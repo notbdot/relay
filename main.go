@@ -74,7 +74,7 @@ func runServe() {
 	}
 	fmt.Printf("  Viewer  → http://localhost:%d/\n", cfg.Server.Port)
 	fmt.Printf("  Admin   → http://localhost:%d/admin?token=%s\n", cfg.Server.Port, adminToken)
-	fmt.Printf("  SRT in  → srt://localhost:%d  (passphrase = stream key)\n", cfg.SRT.Port)
+	fmt.Printf("  SRT in  → srt://localhost:%d  (stream key goes in Stream ID field)\n", cfg.SRT.Port)
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
