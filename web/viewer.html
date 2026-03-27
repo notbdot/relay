@@ -564,7 +564,9 @@
 
     makeOpt('Auto', -1);
     levels.forEach((lvl, i) => {
-      const label = lvl.height ? lvl.height + 'p' : Math.round(lvl.bitrate / 1000) + 'k';
+      const label = lvl.height > 0 ? lvl.height + 'p'
+                  : lvl.bitrate > 0 ? Math.round(lvl.bitrate / 1000) + 'k'
+                  : 'Original';
       makeOpt(label, i);
     });
   }
