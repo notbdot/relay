@@ -3,65 +3,65 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Sluice Admin</title>
+<title>Sluice — Admin</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #282a36;
-    --surface: #44475a;
-    --fg: #f8f8f2;
-    --muted: #6272a4;
-    --purple: #bd93f9;
-    --green: #50fa7b;
-    --orange: #ffb86c;
-    --red: #ff5555;
-    --cyan: #8be9fd;
-    --yellow: #f1fa8c;
-    --pink: #ff79c6;
+    --bg:      #111110;
+    --surface: #1c1c1a;
+    --border:  rgba(255,255,255,0.07);
+    --fg:      #e4e2dc;
+    --muted:   #6b6860;
+    --accent:  #7a9ab5;   /* single accent: cold blue-grey */
+    --live:    #5a9e72;
+    --warn:    #c27d3a;
+    --err:     #b85555;
   }
 
-  html { background: var(--bg); color: var(--fg); font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Mono', 'Courier New', monospace; font-size: 13px; }
+  html {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Mono', 'Courier New', monospace;
+    font-size: 13px;
+    -webkit-font-smoothing: antialiased;
+  }
   body { min-height: 100vh; }
-  a { color: var(--cyan); }
 
   /* --- Layout --- */
-  #app { display: grid; grid-template-columns: 1fr; max-width: 1200px; margin: 0 auto; padding: 16px; gap: 16px; }
+  #app { max-width: 1160px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 1px; }
 
   /* --- Status bar --- */
   #statusbar {
-    background: var(--surface);
     display: grid;
     grid-template-columns: auto auto auto auto 1fr;
-    align-items: center;
-    gap: 0;
-    border: 1px solid rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
   }
 
   .sb-cell {
-    padding: 12px 18px;
-    border-right: 1px solid rgba(255,255,255,0.06);
+    padding: 13px 20px;
+    border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
   }
   .sb-cell:last-child { border-right: none; }
 
-  .sb-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); }
-  .sb-value { font-size: 1.3em; font-weight: 700; }
+  .sb-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--muted); }
+  .sb-value { font-size: 1.25em; font-weight: 700; letter-spacing: -0.02em; }
 
-  #status-indicator { color: var(--red); }
-  #status-indicator.live { color: var(--purple); }
-  #uptime-val { color: var(--green); }
-  #bitrate-val { color: var(--cyan); }
-  #viewers-val { color: var(--yellow); }
+  #status-indicator { color: var(--err); }
+  #status-indicator.live { color: var(--accent); }
+  #uptime-val  { color: var(--live); }
+  #bitrate-val { color: var(--accent); }
+  #viewers-val { color: var(--fg); }
 
-  /* --- Sections --- */
-  .section { background: var(--surface); border: 1px solid rgba(255,255,255,0.06); }
+  /* --- Section --- */
+  .section { border: 1px solid var(--border); margin-top: -1px; }
 
   .section-header {
-    padding: 10px 16px;
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    padding: 9px 16px;
+    border-bottom: 1px solid var(--border);
     font-size: 9px;
     text-transform: uppercase;
     letter-spacing: 0.18em;
@@ -70,48 +70,46 @@
     align-items: center;
     justify-content: space-between;
   }
-
-  .section-header .arrow { color: var(--purple); margin-right: 8px; }
+  .section-header .arrow { color: var(--accent); margin-right: 7px; }
 
   /* --- Sparkline --- */
-  #sparkline-section .section-body { padding: 12px 16px; }
-
-  #sparkline-wrap { position: relative; height: 60px; }
-  #sparkline-svg { width: 100%; height: 60px; }
+  #sparkline-section .section-body { padding: 12px 16px 14px; }
+  #sparkline-wrap { position: relative; height: 56px; }
+  #sparkline-svg { width: 100%; height: 56px; }
   #sparkline-zero { position: absolute; bottom: 0; left: 0; font-size: 9px; color: var(--muted); }
   #sparkline-peak { position: absolute; top: 0; left: 0; font-size: 9px; color: var(--muted); }
 
-  /* --- Two-column layout --- */
-  #columns { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  /* --- Two-column --- */
+  #columns { display: grid; grid-template-columns: 1fr 1fr; gap: 0; margin-top: -1px; }
+  #columns > * { border: 1px solid var(--border); margin-left: -1px; }
+  #col-right { display: flex; flex-direction: column; }
 
   /* --- Chat --- */
   #chat-log {
     height: 360px;
     overflow-y: auto;
     scrollbar-width: thin;
-    scrollbar-color: #44475a transparent;
+    scrollbar-color: var(--surface) transparent;
   }
-  #chat-log::-webkit-scrollbar { width: 4px; }
+  #chat-log::-webkit-scrollbar { width: 3px; }
   #chat-log::-webkit-scrollbar-thumb { background: var(--surface); }
 
   .chat-row {
     display: flex;
     align-items: flex-start;
     gap: 10px;
-    padding: 7px 16px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    transition: background 100ms;
+    padding: 6px 16px;
+    border-bottom: 1px solid var(--border);
   }
-  .chat-row:hover { background: rgba(255,255,255,0.03); }
-  .chat-row.deleted { opacity: 0.3; text-decoration: line-through; }
-  .chat-row.banned-msg { opacity: 0.25; }
+  .chat-row:hover { background: rgba(255,255,255,0.02); }
+  .chat-row.deleted { opacity: 0.25; text-decoration: line-through; }
+  .chat-row.banned-msg { opacity: 0.2; }
 
-  .chat-ts { color: var(--muted); font-size: 10px; white-space: nowrap; padding-top: 1px; width: 50px; flex-shrink: 0; }
-  .chat-user { font-weight: 700; white-space: nowrap; flex-shrink: 0; min-width: 100px; }
-  .chat-user.admin-tag { color: var(--purple); }
+  .chat-ts   { color: var(--muted); font-size: 10px; white-space: nowrap; padding-top: 1px; width: 46px; flex-shrink: 0; }
+  .chat-user { font-weight: 700; white-space: nowrap; flex-shrink: 0; min-width: 90px; }
   .chat-text { flex: 1; color: var(--fg); word-break: break-word; }
 
-  .chat-actions { display: flex; gap: 6px; flex-shrink: 0; opacity: 0; transition: opacity 100ms; }
+  .chat-actions { display: flex; gap: 5px; flex-shrink: 0; opacity: 0; transition: opacity 80ms; }
   .chat-row:hover .chat-actions { opacity: 1; }
 
   .act-btn {
@@ -122,59 +120,107 @@
     font-family: inherit;
     font-size: 10px;
     padding: 2px 6px;
-    transition: color 100ms, border-color 100ms;
+    transition: color 80ms, border-color 80ms;
   }
-  .act-btn.del:hover { color: var(--orange); border-color: var(--orange); }
-  .act-btn.ban:hover { color: var(--red); border-color: var(--red); }
+  .act-btn.del:hover { color: var(--warn);  border-color: var(--warn); }
+  .act-btn.ban:hover { color: var(--err);   border-color: var(--err);  }
 
   .chat-action-bar {
-    padding: 10px 16px;
-    border-top: 1px solid rgba(255,255,255,0.06);
+    padding: 9px 16px;
+    border-top: 1px solid var(--border);
     display: flex;
     gap: 8px;
     align-items: center;
   }
 
-  /* --- Config panel --- */
-  .config-form { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
-
-  .field-group { display: flex; flex-direction: column; gap: 5px; }
-  .field-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); }
-  .field-input {
-    background: var(--bg);
-    border: 1px solid rgba(255,255,255,0.1);
+  /* --- Admin send --- */
+  .admin-send-row {
+    display: flex;
+    gap: 0;
+    border-top: 1px solid var(--border);
+  }
+  .admin-msg-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--border);
     color: var(--fg);
     font-family: inherit;
-    font-size: 13px;
-    padding: 8px 10px;
+    font-size: 12px;
+    padding: 9px 12px;
     outline: none;
-    transition: border-color 100ms;
-    width: 100%;
   }
-  .field-input:focus { border-color: var(--purple); }
-
-  .field-row { display: flex; gap: 8px; align-items: center; }
-  .key-mask { flex: 1; }
-  .reveal-btn, .regen-btn, .save-btn {
+  .admin-msg-input::placeholder { color: var(--muted); }
+  .admin-send-btn {
     background: none;
-    border: 1px solid var(--muted);
-    color: var(--muted);
+    border: none;
+    color: var(--accent);
     cursor: pointer;
     font-family: inherit;
     font-size: 11px;
-    padding: 6px 10px;
+    padding: 9px 14px;
+    letter-spacing: 0.06em;
+    transition: background 80ms;
+  }
+  .admin-send-btn:hover { background: rgba(122,154,181,0.08); }
+
+  /* --- Config --- */
+  .config-form { padding: 16px; display: flex; flex-direction: column; gap: 13px; }
+
+  .field-group { display: flex; flex-direction: column; gap: 5px; }
+  .field-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--muted); }
+
+  .field-input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 7px 10px;
+    outline: none;
+    width: 100%;
+    transition: border-color 80ms;
+  }
+  .field-input:focus { border-color: var(--accent); }
+
+  .field-row { display: flex; gap: 0; align-items: stretch; }
+  .key-mask { flex: 1; }
+
+  .icon-btn {
+    background: none;
+    border: 1px solid var(--border);
+    border-left: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 10px;
+    padding: 0 10px;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    transition: color 100ms, border-color 100ms;
+    transition: color 80ms, border-color 80ms;
     white-space: nowrap;
   }
-  .reveal-btn:hover { color: var(--cyan); border-color: var(--cyan); }
-  .regen-btn:hover { color: var(--orange); border-color: var(--orange); }
-  .save-btn { border-color: var(--purple); color: var(--purple); }
-  .save-btn:hover { background: rgba(189,147,249,0.1); }
+  .icon-btn:hover { color: var(--accent); border-color: var(--accent); }
 
-  .save-status { font-size: 11px; color: var(--green); opacity: 0; transition: opacity 300ms; }
+  .save-row { display: flex; align-items: center; gap: 12px; }
+  .save-btn {
+    background: none;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    padding: 6px 14px;
+    letter-spacing: 0.08em;
+    transition: background 80ms;
+  }
+  .save-btn:hover { background: rgba(122,154,181,0.08); }
+
+  .save-status { font-size: 11px; color: var(--live); opacity: 0; transition: opacity 250ms; }
   .save-status.show { opacity: 1; }
+
+  /* --- Stream control --- */
+  .control-row { padding: 13px 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
   /* --- Sessions --- */
   #session-table { width: 100%; border-collapse: collapse; }
@@ -185,78 +231,29 @@
     text-transform: uppercase;
     letter-spacing: 0.15em;
     color: var(--muted);
-    border-bottom: 1px solid rgba(255,255,255,0.08);
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
   }
-  #session-table td {
-    padding: 8px 16px;
-    border-bottom: 1px solid rgba(255,255,255,0.04);
-    font-size: 12px;
-  }
+  #session-table td { padding: 7px 16px; border-bottom: 1px solid var(--border); font-size: 12px; }
   .session-row:hover { background: rgba(255,255,255,0.02); }
 
-  /* --- Admin chat input --- */
-  .admin-send-row {
-    display: flex;
-    gap: 8px;
-    padding: 10px 16px;
-    border-top: 1px solid rgba(255,255,255,0.06);
-  }
-  .admin-msg-input {
-    flex: 1;
-    background: var(--bg);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: var(--fg);
-    font-family: inherit;
-    font-size: 12px;
-    padding: 7px 10px;
-    outline: none;
-    transition: border-color 100ms;
-  }
-  .admin-msg-input:focus { border-color: var(--purple); }
-  .admin-send-btn {
-    background: rgba(189,147,249,0.1);
-    border: 1px solid var(--purple);
-    color: var(--purple);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 11px;
-    padding: 7px 14px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    transition: background 100ms;
-  }
-  .admin-send-btn:hover { background: rgba(189,147,249,0.2); }
-
   /* --- Buttons --- */
-  .danger-btn {
+  .text-btn {
     background: none;
-    border: 1px solid var(--red);
-    color: var(--red);
+    border: 1px solid var(--border);
+    color: var(--muted);
     cursor: pointer;
     font-family: inherit;
-    font-size: 11px;
-    padding: 5px 12px;
+    font-size: 10px;
+    padding: 5px 11px;
     text-transform: uppercase;
     letter-spacing: 0.1em;
-    transition: background 100ms;
+    transition: color 80ms, border-color 80ms;
   }
-  .danger-btn:hover { background: rgba(255,85,85,0.1); }
+  .text-btn:hover { color: var(--fg); border-color: var(--muted); }
+  .text-btn.danger:hover { color: var(--err); border-color: var(--err); }
+  .text-btn.warn:hover   { color: var(--warn); border-color: var(--warn); }
 
-  .warn-btn {
-    background: none;
-    border: 1px solid var(--orange);
-    color: var(--orange);
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 11px;
-    padding: 5px 12px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    transition: background 100ms;
-  }
-  .warn-btn:hover { background: rgba(255,184,108,0.1); }
-
-  /* --- Responsive --- */
   @media (max-width: 800px) {
     #columns { grid-template-columns: 1fr; }
     #statusbar { grid-template-columns: 1fr 1fr; }
@@ -267,7 +264,6 @@
 <body>
 <div id="app">
 
-  <!-- Status bar -->
   <div id="statusbar">
     <div class="sb-cell">
       <span class="sb-label">Status</span>
@@ -279,7 +275,7 @@
     </div>
     <div class="sb-cell">
       <span class="sb-label">Bitrate</span>
-      <span class="sb-value" id="bitrate-val">-- kbps</span>
+      <span class="sb-value" id="bitrate-val">—</span>
     </div>
     <div class="sb-cell">
       <span class="sb-label">Viewers</span>
@@ -287,91 +283,80 @@
     </div>
     <div class="sb-cell">
       <span class="sb-label">Title</span>
-      <span class="sb-value" id="title-val" style="color:var(--fg);font-size:1em">—</span>
+      <span class="sb-value" id="title-val" style="font-size:1em;font-weight:400;color:var(--muted)">—</span>
     </div>
   </div>
 
-  <!-- Sparkline -->
   <div id="sparkline-section" class="section">
-    <div class="section-header"><span><span class="arrow">→</span> Bitrate · last 5 min</span><span id="sparkline-cur" style="color:var(--cyan)">—</span></div>
+    <div class="section-header">
+      <span><span class="arrow">→</span>Bitrate · last 5 min</span>
+      <span id="sparkline-cur" style="color:var(--accent)">—</span>
+    </div>
     <div class="section-body">
       <div id="sparkline-wrap">
-        <svg id="sparkline-svg" preserveAspectRatio="none" viewBox="0 0 300 60"></svg>
+        <svg id="sparkline-svg" preserveAspectRatio="none" viewBox="0 0 300 56"></svg>
         <span id="sparkline-zero">0</span>
         <span id="sparkline-peak"></span>
       </div>
     </div>
   </div>
 
-  <!-- Two columns: chat + config -->
   <div id="columns">
-
-    <!-- Chat monitor -->
-    <div class="section" id="chat-section">
+    <div id="chat-section">
       <div class="section-header">
-        <span><span class="arrow">→</span> Chat monitor</span>
-        <button class="danger-btn" id="clear-chat-btn">Clear all</button>
+        <span><span class="arrow">→</span>Chat monitor</span>
+        <button class="text-btn danger" id="clear-chat-btn">Clear all</button>
       </div>
       <div id="chat-log"></div>
       <div class="admin-send-row">
         <input class="admin-msg-input" id="admin-msg" placeholder="Send as [admin]..." maxlength="300">
-        <button class="admin-send-btn" id="admin-send-btn">Send</button>
+        <button class="admin-send-btn" id="admin-send-btn">→ Send</button>
       </div>
     </div>
 
-    <!-- Right column: config + sessions -->
-    <div style="display:flex;flex-direction:column;gap:16px">
-
-      <!-- Config -->
-      <div class="section">
-        <div class="section-header"><span class="arrow">→</span> Configuration</div>
+    <div id="col-right">
+      <div>
+        <div class="section-header"><span class="arrow">→</span>Configuration</div>
         <div class="config-form">
           <div class="field-group">
-            <label class="field-label">Stream Title</label>
-            <input class="field-input" id="cfg-title" type="text" placeholder="My Stream">
+            <label class="field-label">Stream title</label>
+            <input class="field-input" id="cfg-title" type="text" placeholder="My Stream" spellcheck="false">
           </div>
           <div class="field-group">
-            <label class="field-label">Stream Key (SRT passphrase)</label>
+            <label class="field-label">Stream key (SRT passphrase)</label>
             <div class="field-row">
               <input class="field-input key-mask" id="cfg-key" type="text" placeholder="XXXX-XXXX-XXXX" spellcheck="false" autocomplete="off">
-              <button class="reveal-btn" id="reveal-key-btn">Reveal</button>
-              <button class="regen-btn" id="regen-key-btn">Regen</button>
+              <button class="icon-btn" id="reveal-key-btn">Hide</button>
+              <button class="icon-btn" id="regen-key-btn">Regen</button>
             </div>
           </div>
           <div class="field-group">
             <label class="field-label">FFmpeg extra flags</label>
-            <input class="field-input" id="cfg-ffmpeg" type="text" placeholder="-vf scale=1280:720">
+            <input class="field-input" id="cfg-ffmpeg" type="text" placeholder="-vf scale=1280:720" spellcheck="false">
           </div>
-          <div class="field-row">
-            <button class="save-btn" id="save-cfg-btn">→ Save config</button>
+          <div class="save-row">
+            <button class="save-btn" id="save-cfg-btn">→ Save</button>
             <span class="save-status" id="save-status">Saved.</span>
           </div>
         </div>
       </div>
 
-      <!-- Stream restart -->
-      <div class="section">
-        <div class="section-header"><span class="arrow">→</span> Stream control</div>
-        <div style="padding:14px 16px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-          <button class="warn-btn" id="restart-stream-btn">Restart ingest</button>
+      <div style="border-top: 1px solid var(--border)">
+        <div class="section-header"><span class="arrow">→</span>Stream control</div>
+        <div class="control-row">
+          <button class="text-btn warn" id="restart-stream-btn">Restart ingest</button>
           <span style="color:var(--muted);font-size:11px">Kills and restarts the FFmpeg SRT listener</span>
         </div>
       </div>
-
     </div>
   </div>
 
-  <!-- Sessions -->
   <div class="section">
-    <div class="section-header"><span class="arrow">→</span> Recent sessions</div>
+    <div class="section-header"><span class="arrow">→</span>Recent sessions</div>
     <table id="session-table">
       <thead>
         <tr>
-          <th>#</th>
-          <th>Started</th>
-          <th>Duration</th>
-          <th>Peak viewers</th>
-          <th>End reason</th>
+          <th>#</th><th>Started</th><th>Duration</th><th>Peak viewers</th><th>End reason</th>
         </tr>
       </thead>
       <tbody id="session-body"></tbody>
@@ -385,146 +370,107 @@
   'use strict';
 
   // --- WebSocket ---
-  let ws = null;
-  let wsReconnect = null;
+  let ws = null, wsReconnect = null;
   const bitrateHistory = new Array(300).fill(0);
 
   function connectWS() {
     const proto = location.protocol === 'https:' ? 'wss' : 'ws';
     ws = new WebSocket(`${proto}://${location.host}/ws?admin=1&username=%5Badmin%5D`);
-
-    ws.addEventListener('message', function(e) {
-      try { handleMsg(JSON.parse(e.data)); } catch(_) {}
-    });
-    ws.addEventListener('close', function() {
-      wsReconnect = setTimeout(connectWS, 3000);
-    });
-    ws.addEventListener('error', function() { ws.close(); });
+    ws.addEventListener('message', e => { try { handleMsg(JSON.parse(e.data)); } catch(_) {} });
+    ws.addEventListener('close',   () => { wsReconnect = setTimeout(connectWS, 3000); });
+    ws.addEventListener('error',   () => ws.close());
   }
-
   connectWS();
 
-  // --- Status updates ---
-  const statusEl = document.getElementById('status-indicator');
-  const uptimeEl = document.getElementById('uptime-val');
+  // --- Status ---
+  const statusEl  = document.getElementById('status-indicator');
+  const uptimeEl  = document.getElementById('uptime-val');
   const bitrateEl = document.getElementById('bitrate-val');
   const viewersEl = document.getElementById('viewers-val');
-  const titleEl = document.getElementById('title-val');
-  let streamOnline = false;
-  let streamUptimeS = 0;
-  let timerInt = null;
+  const titleEl   = document.getElementById('title-val');
+  let streamUptimeS = 0, timerInt = null;
 
   function handleMsg(msg) {
     switch(msg.type) {
-      case 'stream_status':
-        updateStatus(msg.payload);
-        break;
-      case 'chat_message':
-        appendChatRow(msg.payload);
-        break;
-      case 'chat_clear':
-        document.getElementById('chat-log').innerHTML = '';
-        break;
-      case 'chat_ban':
-        markBanned(msg.payload.username);
-        break;
-      case 'chat_delete':
-        markDeleted(msg.payload.id);
-        break;
+      case 'stream_status': updateStatus(msg.payload); break;
+      case 'chat_message':  appendChatRow(msg.payload); break;
+      case 'chat_clear':    document.getElementById('chat-log').innerHTML = ''; break;
+      case 'chat_ban':      markBanned(msg.payload.username); break;
+      case 'chat_delete':   markDeleted(msg.payload.id); break;
     }
   }
 
   function updateStatus(p) {
-    streamOnline = p.online;
     streamUptimeS = p.uptime_s || 0;
-
     statusEl.textContent = p.online ? 'LIVE' : 'OFFLINE';
     statusEl.classList.toggle('live', p.online);
-    bitrateEl.textContent = p.online ? Math.round(p.bitrate_kbps) + ' kbps' : '— kbps';
+    bitrateEl.textContent = p.online ? Math.round(p.bitrate_kbps) + ' kbps' : '—';
     viewersEl.textContent = p.viewer_count || 0;
     if (p.title) titleEl.textContent = p.title;
 
-    // update bitrate history
     bitrateHistory.shift();
     bitrateHistory.push(p.online ? (p.bitrate_kbps || 0) : 0);
     drawSparkline();
 
+    clearInterval(timerInt);
     if (p.online) {
-      clearInterval(timerInt);
-      timerInt = setInterval(function() {
-        streamUptimeS++;
-        uptimeEl.textContent = formatUptime(streamUptimeS);
-      }, 1000);
       uptimeEl.textContent = formatUptime(streamUptimeS);
+      timerInt = setInterval(() => { uptimeEl.textContent = formatUptime(++streamUptimeS); }, 1000);
     } else {
-      clearInterval(timerInt);
       uptimeEl.textContent = '--:--:--';
     }
   }
 
   function formatUptime(s) {
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const sec = s % 60;
-    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
   }
 
   // --- Sparkline ---
-  const sparkSVG = document.getElementById('sparkline-svg');
-  const sparkPeakEl = document.getElementById('sparkline-peak');
-  const sparkCurEl = document.getElementById('sparkline-cur');
+  const sparkSVG  = document.getElementById('sparkline-svg');
+  const sparkPeak = document.getElementById('sparkline-peak');
+  const sparkCur  = document.getElementById('sparkline-cur');
 
   function drawSparkline() {
-    const W = 300, H = 60;
-    const data = bitrateHistory;
-    const peak = Math.max(...data, 100);
+    const W = 300, H = 56;
+    const peak = Math.max(...bitrateHistory, 100);
+    sparkPeak.textContent = Math.round(peak) + ' kbps';
+    const cur = bitrateHistory[bitrateHistory.length - 1];
+    sparkCur.textContent = cur > 0 ? Math.round(cur) + ' kbps' : '—';
 
-    sparkPeakEl.textContent = Math.round(peak) + ' kbps';
-    const cur = data[data.length - 1];
-    sparkCurEl.textContent = cur > 0 ? Math.round(cur) + ' kbps' : '—';
-
-    if (data.every(v => v === 0)) {
-      sparkSVG.innerHTML = `<line x1="0" y1="${H-1}" x2="${W}" y2="${H-1}" stroke="#6272a4" stroke-width="1" stroke-dasharray="4,4"/>`;
+    if (bitrateHistory.every(v => v === 0)) {
+      sparkSVG.innerHTML = `<line x1="0" y1="${H-1}" x2="${W}" y2="${H-1}" stroke="#333" stroke-width="1" stroke-dasharray="3,3"/>`;
       return;
     }
 
-    const pts = data.map((v, i) => {
-      const x = (i / (data.length - 1)) * W;
+    const pts = bitrateHistory.map((v, i) => {
+      const x = (i / (bitrateHistory.length - 1)) * W;
       const y = H - 2 - (v / peak) * (H - 8);
       return `${x},${y}`;
     }).join(' ');
 
-    // Build filled area
-    const firstX = 0;
-    const lastX = W;
-    const polyPts = `${firstX},${H} ` + pts + ` ${lastX},${H}`;
-
     sparkSVG.innerHTML = `
       <defs>
         <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#8be9fd" stop-opacity="0.2"/>
-          <stop offset="100%" stop-color="#8be9fd" stop-opacity="0"/>
+          <stop offset="0%" stop-color="#7a9ab5" stop-opacity="0.15"/>
+          <stop offset="100%" stop-color="#7a9ab5" stop-opacity="0"/>
         </linearGradient>
       </defs>
-      <polygon points="${polyPts}" fill="url(#sg)"/>
-      <polyline points="${pts}" fill="none" stroke="#8be9fd" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+      <polygon points="0,${H} ${pts} ${W},${H}" fill="url(#sg)"/>
+      <polyline points="${pts}" fill="none" stroke="#7a9ab5" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
     `;
   }
 
-  // Fetch bitrate history on load
   fetch('/api/bitrate-history').then(r => r.json()).then(hist => {
-    if (Array.isArray(hist)) {
-      const n = Math.min(hist.length, 300);
-      for (let i = 0; i < n; i++) bitrateHistory[300 - n + i] = hist[i];
-      drawSparkline();
-    }
+    if (!Array.isArray(hist)) return;
+    const n = Math.min(hist.length, 300);
+    for (let i = 0; i < n; i++) bitrateHistory[300 - n + i] = hist[i];
+    drawSparkline();
   }).catch(() => {});
 
-  // --- Chat log ---
+  // --- Chat ---
   const chatLog = document.getElementById('chat-log');
-  const MAX_ADMIN_CHAT = 500;
 
-  // Load recent chat
   fetch('/api/admin/chat/all?limit=100').then(r => r.json()).then(msgs => {
     if (!Array.isArray(msgs)) return;
     msgs.forEach(m => appendChatRow(m, true));
@@ -536,102 +482,76 @@
     row.dataset.id = p.id;
     row.dataset.user = p.username;
     if (p.is_deleted) row.classList.add('deleted');
-    if (p.is_banned) row.classList.add('banned-msg');
+    if (p.is_banned)  row.classList.add('banned-msg');
 
     const ts = new Date((p.timestamp || 0) * 1000);
-    const tsStr = ts.getHours().toString().padStart(2,'0') + ':' + ts.getMinutes().toString().padStart(2,'0');
+    const tsStr = String(ts.getHours()).padStart(2,'0') + ':' + String(ts.getMinutes()).padStart(2,'0');
 
     row.innerHTML = `
       <span class="chat-ts">${tsStr}</span>
-      <span class="chat-user" style="color:${p.color || '#bd93f9'}">${esc(p.username)}</span>
+      <span class="chat-user" style="color:${p.color||'var(--accent)'}">${esc(p.username)}</span>
       <span class="chat-text">${esc(p.message)}</span>
       <span class="chat-actions">
-        <button class="act-btn del" data-id="${p.id}" title="Delete message">del</button>
-        <button class="act-btn ban" data-user="${esc(p.username)}" title="Ban user">ban</button>
-      </span>
-    `;
+        <button class="act-btn del" data-id="${p.id}">del</button>
+        <button class="act-btn ban" data-user="${esc(p.username)}">ban</button>
+      </span>`;
 
     const atBottom = chatLog.scrollHeight - chatLog.scrollTop - chatLog.clientHeight < 80;
     chatLog.appendChild(row);
-
-    while (chatLog.children.length > MAX_ADMIN_CHAT) {
-      chatLog.removeChild(chatLog.firstChild);
-    }
-
+    while (chatLog.children.length > 500) chatLog.removeChild(chatLog.firstChild);
     if (!historic && atBottom) chatLog.scrollTop = chatLog.scrollHeight;
     if (historic) chatLog.scrollTop = chatLog.scrollHeight;
   }
 
   function markDeleted(id) {
-    const el = chatLog.querySelector(`.chat-row[data-id="${id}"]`);
-    if (el) el.classList.add('deleted');
+    chatLog.querySelector(`.chat-row[data-id="${id}"]`)?.classList.add('deleted');
   }
-
   function markBanned(user) {
     chatLog.querySelectorAll(`.chat-row[data-user="${CSS.escape(user)}"]`).forEach(el => el.classList.add('banned-msg'));
   }
 
-  chatLog.addEventListener('click', function(e) {
-    const delBtn = e.target.closest('.act-btn.del');
-    const banBtn = e.target.closest('.act-btn.ban');
-    if (delBtn) {
-      const id = parseInt(delBtn.dataset.id);
-      adminPost('/api/admin/chat/delete', { id }).then(() => markDeleted(id));
+  chatLog.addEventListener('click', e => {
+    const del = e.target.closest('.act-btn.del');
+    const ban = e.target.closest('.act-btn.ban');
+    if (del) {
+      const id = parseInt(del.dataset.id);
+      post('/api/admin/chat/delete', { id }).then(() => markDeleted(id));
     }
-    if (banBtn) {
-      const user = banBtn.dataset.user;
-      if (confirm('Ban user "' + user + '"?')) {
-        adminPost('/api/admin/chat/ban', { username: user }).then(() => markBanned(user));
-      }
+    if (ban) {
+      const user = ban.dataset.user;
+      if (confirm(`Ban "${user}"?`)) post('/api/admin/chat/ban', { username: user }).then(() => markBanned(user));
     }
   });
 
-  // Clear chat
-  document.getElementById('clear-chat-btn').addEventListener('click', function() {
-    if (confirm('Clear all chat messages?')) {
-      adminPost('/api/admin/chat/clear', {}).then(() => {
-        chatLog.innerHTML = '';
-      });
-    }
+  document.getElementById('clear-chat-btn').addEventListener('click', () => {
+    if (confirm('Clear all chat messages?')) post('/api/admin/chat/clear', {}).then(() => chatLog.innerHTML = '');
   });
 
-  // Admin message send
   const adminMsgInput = document.getElementById('admin-msg');
-  document.getElementById('admin-send-btn').addEventListener('click', sendAdminMsg);
-  adminMsgInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') sendAdminMsg();
-  });
-
   function sendAdminMsg() {
     const text = adminMsgInput.value.trim();
     if (!text || !ws || ws.readyState !== WebSocket.OPEN) return;
-    ws.send(JSON.stringify({
-      type: 'chat_message',
-      payload: { username: '[admin]', message: text }
-    }));
+    ws.send(JSON.stringify({ type: 'chat_message', payload: { username: '[admin]', message: text } }));
     adminMsgInput.value = '';
   }
+  document.getElementById('admin-send-btn').addEventListener('click', sendAdminMsg);
+  adminMsgInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendAdminMsg(); });
 
-  // --- Config panel ---
-  const cfgTitle = document.getElementById('cfg-title');
-  const cfgKey = document.getElementById('cfg-key');
+  // --- Config ---
+  const cfgTitle  = document.getElementById('cfg-title');
+  const cfgKey    = document.getElementById('cfg-key');
   const cfgFFmpeg = document.getElementById('cfg-ffmpeg');
 
-  // Load current config (title, stream key, ffmpeg flags)
   fetch('/api/admin/config').then(r => r.json()).then(d => {
     if (d.stream_title) cfgTitle.value = d.stream_title;
-    if (d.stream_key)   cfgKey.value = d.stream_key;
+    if (d.stream_key)   cfgKey.value   = d.stream_key;
     if (d.ffmpeg_flags) cfgFFmpeg.value = d.ffmpeg_flags;
   }).catch(() => {});
 
   document.getElementById('reveal-key-btn').addEventListener('click', function() {
-    if (cfgKey.type === 'text') {
-      cfgKey.type = 'password';
-      this.textContent = 'Show';
-    } else {
-      cfgKey.type = 'text';
-      this.textContent = 'Hide';
-    }
+    const hide = cfgKey.type === 'text';
+    cfgKey.type = hide ? 'password' : 'text';
+    this.textContent = hide ? 'Show' : 'Hide';
   });
 
   document.getElementById('regen-key-btn').addEventListener('click', function() {
@@ -641,24 +561,18 @@
     document.getElementById('reveal-key-btn').textContent = 'Hide';
   });
 
-  document.getElementById('save-cfg-btn').addEventListener('click', function() {
-    const body = {};
-    if (cfgTitle.value.trim()) body.stream_title = cfgTitle.value.trim();
+  document.getElementById('save-cfg-btn').addEventListener('click', () => {
+    const body = { stream_title: cfgTitle.value.trim(), ffmpeg_flags: cfgFFmpeg.value.trim() };
     if (cfgKey.value.trim()) body.stream_key = cfgKey.value.trim();
-    if (cfgFFmpeg.value.trim() !== undefined) body.ffmpeg_flags = cfgFFmpeg.value.trim();
-
-    adminPost('/api/admin/config', body).then(() => {
+    post('/api/admin/config', body).then(() => {
       const el = document.getElementById('save-status');
       el.classList.add('show');
       setTimeout(() => el.classList.remove('show'), 2000);
     });
   });
 
-  // Stream restart
-  document.getElementById('restart-stream-btn').addEventListener('click', function() {
-    if (confirm('Restart FFmpeg ingest process?')) {
-      adminPost('/api/admin/stream/restart', {});
-    }
+  document.getElementById('restart-stream-btn').addEventListener('click', () => {
+    if (confirm('Restart FFmpeg ingest?')) post('/api/admin/stream/restart', {});
   });
 
   // --- Sessions ---
@@ -671,14 +585,13 @@
         const tr = document.createElement('tr');
         tr.className = 'session-row';
         const started = new Date(s.started_at * 1000).toLocaleString();
-        const dur = s.duration_s ? formatUptime(s.duration_s) : (s.ended_at ? '—' : '<span style="color:var(--green)">LIVE</span>');
+        const dur = s.duration_s ? formatUptime(s.duration_s) : (s.ended_at ? '—' : '<span style="color:var(--live)">LIVE</span>');
         tr.innerHTML = `
           <td style="color:var(--muted)">${s.id}</td>
           <td>${started}</td>
           <td>${dur}</td>
-          <td style="color:var(--yellow)">${s.peak_viewers}</td>
-          <td style="color:var(--muted)">${s.end_reason || '—'}</td>
-        `;
+          <td>${s.peak_viewers}</td>
+          <td style="color:var(--muted)">${s.end_reason || '—'}</td>`;
         tbody.appendChild(tr);
       });
     }).catch(() => {});
@@ -687,23 +600,12 @@
   setInterval(loadSessions, 30000);
 
   // --- Helpers ---
-  function esc(str) {
-    return String(str)
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
-
-  function adminPost(url, body) {
-    return fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
+  function post(url, body) {
+    return fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   }
-
-  // Generates a readable key like "A3KF-9XM2-P7BV" (Crockford charset, no 0/O/1/I/L)
   function randomReadableKey() {
     const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
     const arr = new Uint8Array(12);
