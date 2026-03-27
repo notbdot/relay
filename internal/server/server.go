@@ -23,8 +23,9 @@ type Deps struct {
 	Ingest      *ingest.Manager
 	SegmentsDir string
 	// embed fs for static files
-	ViewerHTML []byte
-	AdminHTML  []byte
+	ViewerHTML  []byte
+	AdminHTML   []byte
+	OverlayHTML []byte
 }
 
 type Server struct {
@@ -57,6 +58,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /", s.viewerHandler)
 	s.mux.HandleFunc("GET /hls/", s.hlsHandler)
 	s.mux.HandleFunc("GET /admin", s.adminHandler)
+	s.mux.HandleFunc("GET /overlay", s.overlayHandler)
 	s.mux.HandleFunc("GET /ws", s.wsHandler)
 	s.mux.HandleFunc("GET /api/status", s.apiStatus)
 	s.mux.HandleFunc("GET /api/bitrate-history", s.apiBitrateHistory)
@@ -198,6 +200,11 @@ func (s *Server) hlsHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) adminHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write(s.deps.AdminHTML)
+}
+
+func (s *Server) overlayHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write(s.deps.OverlayHTML)
 }
 
 func (s *Server) wsHandler(w http.ResponseWriter, r *http.Request) {

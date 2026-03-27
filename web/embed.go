@@ -7,3 +7,6 @@ var ViewerHTML []byte
 
 //go:embed admin.html
 var AdminHTML []byte
+
+//go:embed overlay.html
+var OverlayHTML []byte
