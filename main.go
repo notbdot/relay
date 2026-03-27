@@ -104,6 +104,7 @@ func runServe() {
 		cfg.FFmpeg.ExtraFlags,
 		getStreamKey,
 		getExtraFlags,
+		func() string { v, _ := database.GetConfig("quality_preset"); return v },
 	)
 
 	go mgr.Start(ctx)

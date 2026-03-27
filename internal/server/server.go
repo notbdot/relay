@@ -261,10 +261,11 @@ func (s *Server) apiBitrateHistory(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) apiAdminConfig(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		StreamTitle  string `json:"stream_title"`
-		StreamKey    string `json:"stream_key"`
-		FFmpegFlags  string `json:"ffmpeg_flags"`
-		SRTPort      string `json:"srt_port"`
+		StreamTitle   string `json:"stream_title"`
+		StreamKey     string `json:"stream_key"`
+		FFmpegFlags   string `json:"ffmpeg_flags"`
+		SRTPort       string `json:"srt_port"`
+		QualityPreset string `json:"quality_preset"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
@@ -288,6 +289,10 @@ func (s *Server) apiAdminConfig(w http.ResponseWriter, r *http.Request) {
 		_ = s.deps.DB.SetConfig("srt_port", body.SRTPort)
 		// Note: actual port change requires process restart
 	}
+	if body.QualityPreset != "" {
+		_ = s.deps.DB.SetConfig("quality_preset", body.QualityPreset)
+		needsRestart = true
+	}
 
 	if needsRestart {
 		s.deps.Ingest.Restart()
@@ -301,11 +306,13 @@ func (s *Server) apiAdminConfigGet(w http.ResponseWriter, r *http.Request) {
 	key, _ := s.deps.DB.GetConfig("stream_key")
 	flags, _ := s.deps.DB.GetConfig("ffmpeg_flags")
 	srtPort, _ := s.deps.DB.GetConfig("srt_port")
+	qualityPreset, _ := s.deps.DB.GetConfig("quality_preset")
 	jsonResp(w, map[string]string{
-		"stream_title": title,
-		"stream_key":   key,
-		"ffmpeg_flags": flags,
-		"srt_port":     srtPort,
+		"stream_title":   title,
+		"stream_key":     key,
+		"ffmpeg_flags":   flags,
+		"srt_port":       srtPort,
+		"quality_preset": qualityPreset,
 	})
 }
 

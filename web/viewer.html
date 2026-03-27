@@ -138,6 +138,23 @@
     flex-shrink: 0;
   }
 
+  #sync-btn {
+    display: none;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    padding: 3px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: color 200ms, border-color 200ms;
+    flex-shrink: 0;
+  }
+  #sync-btn:hover { color: var(--accent); border-color: var(--accent); }
+  #sync-btn.visible { display: block; }
+
   /* === Chat panel === */
   #chat-panel {
     width: var(--chat-w);
@@ -368,6 +385,7 @@
       <div id="live-dot"></div>
       <div id="stream-title">Loading...</div>
       <div id="viewer-count"></div>
+      <button id="sync-btn" title="Sync to live edge">↺ Live</button>
     </div>
   </div>
 
@@ -454,10 +472,12 @@
     if (online) {
       offlineOverlay.classList.add('hidden');
       liveDot.classList.add('live');
+      document.getElementById('sync-btn').classList.add('visible');
       if (!hlsInstance) startPlayer();
     } else {
       offlineOverlay.classList.remove('hidden');
       liveDot.classList.remove('live');
+      document.getElementById('sync-btn').classList.remove('visible');
       if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
     }
     if (title) { streamTitle.textContent = title; document.title = (online ? '● ' : '') + title; }
@@ -545,6 +565,14 @@
     const el = chatMessages.querySelector(`.chat-msg[data-id="${id}"]`);
     if (el) el.remove();
   }
+
+  // --- Sync button ---
+  document.getElementById('sync-btn').addEventListener('click', () => {
+    if (!hlsInstance || !video) return;
+    const edge = hlsInstance.liveSyncPosition;
+    if (edge != null) video.currentTime = edge;
+    else video.currentTime = Math.max(0, video.duration - 1);
+  });
 
   // --- Chat form ---
   const chatForm = document.getElementById('chat-form');

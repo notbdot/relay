@@ -41,6 +41,7 @@ type Manager struct {
 
 	getStreamKey  func() string
 	getExtraFlags func() string
+	getQuality    func() string
 
 	cmd         *exec.Cmd
 	cancel      context.CancelFunc
@@ -57,6 +58,7 @@ func New(
 	extraFlags string,
 	getStreamKey func() string,
 	getExtraFlagsFunc func() string,
+	getQualityFunc func() string,
 ) *Manager {
 	mgr := &Manager{
 		ffmpegPath:    ffmpegPath,
@@ -67,10 +69,28 @@ func New(
 		extraFlags:    extraFlags,
 		getStreamKey:  getStreamKey,
 		getExtraFlags: getExtraFlagsFunc,
+		getQuality:    getQualityFunc,
 		StatusCh:      make(chan StatusChange, 8),
 	}
 	mgr.statsAtomic.Store(&Stats{})
 	return mgr
+}
+
+// qualityArgs maps a quality preset name to FFmpeg encoding arguments.
+func qualityArgs(preset string) []string {
+	switch preset {
+	case "1080p":
+		return []string{"-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency", "-b:v", "4000k", "-maxrate", "4000k", "-bufsize", "8000k", "-vf", "scale=-2:1080", "-c:a", "copy"}
+	case "720p":
+		return []string{"-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency", "-b:v", "2500k", "-maxrate", "2500k", "-bufsize", "5000k", "-vf", "scale=-2:720", "-c:a", "copy"}
+	case "480p":
+		return []string{"-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency", "-b:v", "1000k", "-maxrate", "1000k", "-bufsize", "2000k", "-vf", "scale=-2:480", "-c:a", "copy"}
+	case "360p":
+		return []string{"-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency", "-b:v", "500k", "-maxrate", "500k", "-bufsize", "1000k", "-vf", "scale=-2:360", "-c:a", "copy"}
+	default:
+		// "" or "source" or anything else: pass-through
+		return []string{"-c:v", "copy", "-c:a", "copy"}
+	}
 }
 
 // Start begins the ingest loop. Blocks until ctx is cancelled.
@@ -149,6 +169,11 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 		}
 	}
 
+	quality := ""
+	if mgr.getQuality != nil {
+		quality = mgr.getQuality()
+	}
+
 	args := []string{
 		"-y",
 		"-loglevel", "verbose",
@@ -157,14 +182,15 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 		"-analyzeduration", "0",
 		"-f", "mpegts",
 		"-i", srtURL,
-		"-c:v", "copy",
-		"-c:a", "copy",
+	}
+	args = append(args, qualityArgs(quality)...)
+	args = append(args,
 		"-f", "hls",
 		"-hls_time", strconv.Itoa(mgr.hlsTime),
 		"-hls_list_size", strconv.Itoa(mgr.hlsListSize),
 		"-hls_flags", "delete_segments+append_list",
 		"-hls_segment_filename", segPattern,
-	}
+	)
 
 	if extraFlags != "" {
 		args = append(args, strings.Fields(extraFlags)...)

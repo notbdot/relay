@@ -183,6 +183,21 @@
   }
   .field-input:focus { border-color: var(--accent); }
 
+  select.field-input {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--fg);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 7px 10px;
+    outline: none;
+    width: 100%;
+    transition: border-color 80ms;
+    appearance: none;
+    cursor: pointer;
+  }
+  select.field-input:focus { border-color: var(--accent); }
+
   .field-row { display: flex; gap: 0; align-items: stretch; }
   .key-mask { flex: 1; }
 
@@ -329,6 +344,16 @@
               <button class="icon-btn" id="reveal-key-btn">Hide</button>
               <button class="icon-btn" id="regen-key-btn">Regen</button>
             </div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Output quality</label>
+            <select class="field-input" id="cfg-quality">
+              <option value="source">Source (pass-through)</option>
+              <option value="1080p">1080p — 4 Mbps</option>
+              <option value="720p">720p — 2.5 Mbps</option>
+              <option value="480p">480p — 1 Mbps</option>
+              <option value="360p">360p — 500 kbps</option>
+            </select>
           </div>
           <div class="field-group">
             <label class="field-label">FFmpeg extra flags</label>
@@ -541,14 +566,16 @@
   adminMsgInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendAdminMsg(); });
 
   // --- Config ---
-  const cfgTitle  = document.getElementById('cfg-title');
-  const cfgKey    = document.getElementById('cfg-key');
-  const cfgFFmpeg = document.getElementById('cfg-ffmpeg');
+  const cfgTitle   = document.getElementById('cfg-title');
+  const cfgKey     = document.getElementById('cfg-key');
+  const cfgFFmpeg  = document.getElementById('cfg-ffmpeg');
+  const cfgQuality = document.getElementById('cfg-quality');
 
   fetch('/api/admin/config').then(r => r.json()).then(d => {
     if (d.stream_title) cfgTitle.value = d.stream_title;
     if (d.stream_key)   cfgKey.value   = d.stream_key;
     if (d.ffmpeg_flags) cfgFFmpeg.value = d.ffmpeg_flags;
+    if (d.quality_preset) cfgQuality.value = d.quality_preset;
   }).catch(() => {});
 
   document.getElementById('reveal-key-btn').addEventListener('click', function() {
@@ -565,7 +592,7 @@
   });
 
   document.getElementById('save-cfg-btn').addEventListener('click', () => {
-    const body = { stream_title: cfgTitle.value.trim(), ffmpeg_flags: cfgFFmpeg.value.trim() };
+    const body = { stream_title: cfgTitle.value.trim(), ffmpeg_flags: cfgFFmpeg.value.trim(), quality_preset: cfgQuality.value };
     if (cfgKey.value.trim()) body.stream_key = cfgKey.value.trim();
     post('/api/admin/config', body).then(() => {
       const el = document.getElementById('save-status');
