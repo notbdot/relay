@@ -101,8 +101,10 @@ func (mgr *Manager) Start(ctx context.Context) {
 
 var bitrateRe   = regexp.MustCompile(`bitrate=\s*([\d.]+)\s*kbits/s`)
 var connectedRe = regexp.MustCompile(`Input #0|SRT source opened|Opening .* for reading`)
-// SRT stream ID appears in FFmpeg logs as: "Stream-ID: 'value'" or "streamid: value"
-var streamIDRe  = regexp.MustCompile(`(?i)stream.?id[=:\s]+'?([^'\s]+)'?`)
+// SRT stream ID in FFmpeg verbose logs: "Stream-ID: 'value'" or "streamid: value"
+var streamIDRe  = regexp.MustCompile(`(?i)stream.?id[=:\s]+'?([^'\n]+?)'?\s*$`)
+// SRT ACL format used by IRL Pro and some other apps: "#!::r=STREAMKEY,h=hostname,..."
+var srtACLRe    = regexp.MustCompile(`#!::.*\br=([^,\s]+)`)
 
 func (mgr *Manager) runFFmpeg(ctx context.Context) {
 	// Listen without passphrase — authenticate via SRT stream ID instead.
@@ -193,7 +195,12 @@ func (mgr *Manager) parseLine(line string, connected *bool, streamIDChecked *boo
 	if !*streamIDChecked {
 		if m := streamIDRe.FindStringSubmatch(line); m != nil {
 			*streamIDChecked = true
-			incomingID := strings.Trim(m[1], "[],'\" \t")
+			raw := strings.Trim(m[1], "[],'\" \t")
+			// SRT ACL format: "#!::r=STREAMKEY,h=hostname" — extract the r= field
+			incomingID := raw
+			if acl := srtACLRe.FindStringSubmatch(raw); acl != nil {
+				incomingID = acl[1]
+			}
 			streamKey := mgr.getStreamKey()
 			if streamKey != "" && incomingID != streamKey {
 				log.Printf("ingest: rejected connection — wrong stream ID %q (expected %q)", incomingID, streamKey)
