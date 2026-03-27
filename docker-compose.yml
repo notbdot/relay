@@ -2,12 +2,9 @@ services:
   sluice:
     build: .
     restart: unless-stopped
-    ports:
-      - "2935:2935"        # HTTP (viewer + admin)
-      - "9999:9999/udp"    # SRT — OBS stream input
-      - "9998:9998/udp"    # SRT — camera feed input
+    network_mode: host     # SRT/UDP stream data gets dropped by Docker bridge NAT
     volumes:
-      - ./data:/data       # persists sluice.json and HLS segments
+      - ./data:/data
     environment:
       SLUICE_SEGMENTS_DIR: "/data/segments"
       SLUICE_DB_PATH: "/data/sluice.json"
