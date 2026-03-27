@@ -463,9 +463,9 @@ func jsonResp(w http.ResponseWriter, v any) {
 	json.NewEncoder(w).Encode(v)
 }
 
-// usernameColor deterministically maps a username to a Dracula accent color.
+// usernameColor deterministically maps a username to a muted accent color.
 func usernameColor(username string) string {
-	colors := []string{"#bd93f9", "#ff79c6", "#8be9fd", "#ffb86c", "#f1fa8c", "#50fa7b"}
+	colors := []string{"#b07d3e", "#7a6fa8", "#4a8fa0", "#7a8f4a", "#a06b6b", "#6b8faa"}
 	var h uint32
 	for _, c := range username {
 		h = h*31 + uint32(c)

@@ -8,11 +8,11 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg:      #111110;
-    --surface: #1c1c1a;
-    --border:  rgba(255,255,255,0.07);
-    --fg:      #e4e2dc;
-    --muted:   #6b6860;
+    --bg:      #1c1b19;
+    --surface: #272522;
+    --border:  rgba(255,255,255,0.10);
+    --fg:      #e8e5de;
+    --muted:   #7a7770;
     --accent:  #7a9ab5;   /* single accent: cold blue-grey */
     --live:    #5a9e72;
     --warn:    #c27d3a;
@@ -470,6 +470,7 @@
 
   // --- Chat ---
   const chatLog = document.getElementById('chat-log');
+  const renderedIDs = new Set();
 
   fetch('/api/admin/chat/all?limit=100').then(r => r.json()).then(msgs => {
     if (!Array.isArray(msgs)) return;
@@ -477,6 +478,8 @@
   }).catch(() => {});
 
   function appendChatRow(p, historic) {
+    if (p.id && renderedIDs.has(p.id)) return;
+    if (p.id) renderedIDs.add(p.id);
     const row = document.createElement('div');
     row.className = 'chat-row';
     row.dataset.id = p.id;
