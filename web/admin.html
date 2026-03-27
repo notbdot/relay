@@ -269,6 +269,23 @@
   .text-btn.danger:hover { color: var(--err); border-color: var(--err); }
   .text-btn.warn:hover   { color: var(--warn); border-color: var(--warn); }
 
+  /* --- Scene control --- */
+  .scene-buttons { padding: 13px 16px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .scene-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 11px;
+    padding: 6px 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    transition: color 80ms, border-color 80ms, background 80ms;
+  }
+  .scene-btn:hover { color: var(--fg); border-color: var(--muted); }
+  .scene-btn.active { color: var(--accent); border-color: var(--accent); background: rgba(122,154,181,0.08); }
+
   @media (max-width: 800px) {
     #columns { grid-template-columns: 1fr; }
     #statusbar { grid-template-columns: 1fr 1fr; }
@@ -316,6 +333,16 @@
     </div>
   </div>
 
+  <div class="section">
+    <div class="section-header"><span class="arrow">→</span>Scene</div>
+    <div class="scene-buttons">
+      <button class="scene-btn" data-scene="starting_soon">● Starting Soon</button>
+      <button class="scene-btn" data-scene="brb">↺ Be Right Back</button>
+      <button class="scene-btn" data-scene="ending">✕ Ending</button>
+      <button class="scene-btn" data-scene="live">→ Go Live</button>
+    </div>
+  </div>
+
   <div id="columns">
     <div id="chat-section">
       <div class="section-header">
@@ -358,6 +385,22 @@
           <div class="field-group">
             <label class="field-label">FFmpeg extra flags</label>
             <input class="field-input" id="cfg-ffmpeg" type="text" placeholder="-vf scale=1280:720" spellcheck="false">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Scene music · Starting Soon URL</label>
+            <input class="field-input" id="cfg-music-starting-soon" type="text" placeholder="https://..." spellcheck="false">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Scene music · Be Right Back URL</label>
+            <input class="field-input" id="cfg-music-brb" type="text" placeholder="https://..." spellcheck="false">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Scene music · Ending URL</label>
+            <input class="field-input" id="cfg-music-ending" type="text" placeholder="https://..." spellcheck="false">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Screensaver video URLs (one per line, blank = use built-in aerials)</label>
+            <textarea class="field-input" id="cfg-screensaver-urls" rows="3" placeholder="https://sylvan.apple.com/..." spellcheck="false" style="resize:vertical;min-height:60px;line-height:1.5"></textarea>
           </div>
           <div class="save-row">
             <button class="save-btn" id="save-cfg-btn">→ Save</button>
@@ -425,10 +468,27 @@
     }
   }
 
+  // --- Scene ---
+  let activeScene = 'live';
+
+  function setActiveScene(scene) {
+    activeScene = scene;
+    document.querySelectorAll('.scene-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.scene === scene);
+    });
+  }
+
+  document.querySelectorAll('.scene-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      post('/api/admin/scene', { scene: btn.dataset.scene }).then(() => setActiveScene(btn.dataset.scene));
+    });
+  });
+
   function updateStatus(p) {
     streamUptimeS = p.uptime_s || 0;
     statusEl.textContent = p.online ? 'LIVE' : 'OFFLINE';
     statusEl.classList.toggle('live', p.online);
+    if (p.scene) setActiveScene(p.scene);
     bitrateEl.textContent = p.online ? Math.round(p.bitrate_kbps) + ' kbps' : '—';
     viewersEl.textContent = p.viewer_count || 0;
     if (p.title) titleEl.textContent = p.title;
@@ -566,16 +626,25 @@
   adminMsgInput.addEventListener('keydown', e => { if (e.key === 'Enter') sendAdminMsg(); });
 
   // --- Config ---
-  const cfgTitle   = document.getElementById('cfg-title');
-  const cfgKey     = document.getElementById('cfg-key');
-  const cfgFFmpeg  = document.getElementById('cfg-ffmpeg');
-  const cfgQuality = document.getElementById('cfg-quality');
+  const cfgTitle              = document.getElementById('cfg-title');
+  const cfgKey                = document.getElementById('cfg-key');
+  const cfgFFmpeg             = document.getElementById('cfg-ffmpeg');
+  const cfgQuality            = document.getElementById('cfg-quality');
+  const cfgMusicStartingSoon  = document.getElementById('cfg-music-starting-soon');
+  const cfgMusicBRB           = document.getElementById('cfg-music-brb');
+  const cfgMusicEnding        = document.getElementById('cfg-music-ending');
+  const cfgScreensaverURLs    = document.getElementById('cfg-screensaver-urls');
 
   fetch('/api/admin/config').then(r => r.json()).then(d => {
     if (d.stream_title) cfgTitle.value = d.stream_title;
     if (d.stream_key)   cfgKey.value   = d.stream_key;
     if (d.ffmpeg_flags) cfgFFmpeg.value = d.ffmpeg_flags;
     if (d.quality_preset) cfgQuality.value = d.quality_preset;
+    if (d.scene) setActiveScene(d.scene);
+    cfgMusicStartingSoon.value = d.music_starting_soon || '';
+    cfgMusicBRB.value          = d.music_brb || '';
+    cfgMusicEnding.value       = d.music_ending || '';
+    cfgScreensaverURLs.value   = d.screensaver_urls || '';
   }).catch(() => {});
 
   document.getElementById('reveal-key-btn').addEventListener('click', function() {
@@ -592,7 +661,15 @@
   });
 
   document.getElementById('save-cfg-btn').addEventListener('click', () => {
-    const body = { stream_title: cfgTitle.value.trim(), ffmpeg_flags: cfgFFmpeg.value.trim(), quality_preset: cfgQuality.value };
+    const body = {
+      stream_title:       cfgTitle.value.trim(),
+      ffmpeg_flags:       cfgFFmpeg.value.trim(),
+      quality_preset:     cfgQuality.value,
+      music_starting_soon: cfgMusicStartingSoon.value.trim(),
+      music_brb:          cfgMusicBRB.value.trim(),
+      music_ending:       cfgMusicEnding.value.trim(),
+      screensaver_urls:   cfgScreensaverURLs.value.trim(),
+    };
     if (cfgKey.value.trim()) body.stream_key = cfgKey.value.trim();
     post('/api/admin/config', body).then(() => {
       const el = document.getElementById('save-status');

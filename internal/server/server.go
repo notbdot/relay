@@ -67,6 +67,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/admin/chat/clear", s.apiChatClear)
 	s.mux.HandleFunc("POST /api/admin/chat/ban", s.apiChatBan)
 	s.mux.HandleFunc("POST /api/admin/chat/delete", s.apiChatDelete)
+	s.mux.HandleFunc("POST /api/admin/scene", s.apiAdminScene)
 	s.mux.HandleFunc("POST /api/admin/stream/restart", s.apiStreamRestart)
 	s.mux.HandleFunc("GET /api/admin/sessions", s.apiSessions)
 	s.mux.HandleFunc("GET /api/admin/chat/all", s.apiAllChat)
@@ -117,12 +118,17 @@ func (s *Server) statsLoop(ctx context.Context) {
 			}
 
 			title, _ := s.deps.DB.GetConfig("stream_title")
+			scene, _ := s.deps.DB.GetConfig("scene")
+			if scene == "" {
+				scene = "live"
+			}
 			payload := hub.StreamStatusPayload{
 				Online:      stats.Online,
 				Bitrate:     stats.CurrentKbps,
 				UptimeS:     s.deps.Ingest.UptimeSeconds(),
 				ViewerCount: s.deps.Hub.ViewerCount(),
 				Title:       title,
+				Scene:       scene,
 			}
 			s.deps.Hub.BroadcastMessage(hub.TypeStreamStatus, payload)
 		}
@@ -249,12 +255,17 @@ func (s *Server) wsHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) apiStatus(w http.ResponseWriter, r *http.Request) {
 	stats := s.deps.Ingest.Stats()
 	title, _ := s.deps.DB.GetConfig("stream_title")
+	scene, _ := s.deps.DB.GetConfig("scene")
+	if scene == "" {
+		scene = "live"
+	}
 	jsonResp(w, map[string]any{
 		"online":       stats.Online,
 		"bitrate_kbps": stats.CurrentKbps,
 		"uptime_s":     s.deps.Ingest.UptimeSeconds(),
 		"viewer_count": s.deps.Hub.ViewerCount(),
 		"title":        title,
+		"scene":        scene,
 	})
 }
 
@@ -268,11 +279,15 @@ func (s *Server) apiBitrateHistory(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) apiAdminConfig(w http.ResponseWriter, r *http.Request) {
 	var body struct {
-		StreamTitle   string `json:"stream_title"`
-		StreamKey     string `json:"stream_key"`
-		FFmpegFlags   string `json:"ffmpeg_flags"`
-		SRTPort       string `json:"srt_port"`
-		QualityPreset string `json:"quality_preset"`
+		StreamTitle      string `json:"stream_title"`
+		StreamKey        string `json:"stream_key"`
+		FFmpegFlags      string `json:"ffmpeg_flags"`
+		SRTPort          string `json:"srt_port"`
+		QualityPreset    string `json:"quality_preset"`
+		MusicStartingSoon string `json:"music_starting_soon"`
+		MusicBRB         string `json:"music_brb"`
+		MusicEnding      string `json:"music_ending"`
+		ScreensaverURLs  string `json:"screensaver_urls"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
@@ -294,12 +309,16 @@ func (s *Server) apiAdminConfig(w http.ResponseWriter, r *http.Request) {
 	}
 	if body.SRTPort != "" {
 		_ = s.deps.DB.SetConfig("srt_port", body.SRTPort)
-		// Note: actual port change requires process restart
 	}
 	if body.QualityPreset != "" {
 		_ = s.deps.DB.SetConfig("quality_preset", body.QualityPreset)
 		needsRestart = true
 	}
+	// Scene config fields — always save even if empty (allows clearing)
+	_ = s.deps.DB.SetConfig("music_starting_soon", body.MusicStartingSoon)
+	_ = s.deps.DB.SetConfig("music_brb", body.MusicBRB)
+	_ = s.deps.DB.SetConfig("music_ending", body.MusicEnding)
+	_ = s.deps.DB.SetConfig("screensaver_urls", body.ScreensaverURLs)
 
 	if needsRestart {
 		s.deps.Ingest.Restart()
@@ -314,13 +333,54 @@ func (s *Server) apiAdminConfigGet(w http.ResponseWriter, r *http.Request) {
 	flags, _ := s.deps.DB.GetConfig("ffmpeg_flags")
 	srtPort, _ := s.deps.DB.GetConfig("srt_port")
 	qualityPreset, _ := s.deps.DB.GetConfig("quality_preset")
+	scene, _ := s.deps.DB.GetConfig("scene")
+	if scene == "" {
+		scene = "live"
+	}
+	musicStartingSoon, _ := s.deps.DB.GetConfig("music_starting_soon")
+	musicBRB, _ := s.deps.DB.GetConfig("music_brb")
+	musicEnding, _ := s.deps.DB.GetConfig("music_ending")
+	screensaverURLs, _ := s.deps.DB.GetConfig("screensaver_urls")
 	jsonResp(w, map[string]string{
-		"stream_title":   title,
-		"stream_key":     key,
-		"ffmpeg_flags":   flags,
-		"srt_port":       srtPort,
-		"quality_preset": qualityPreset,
+		"stream_title":       title,
+		"stream_key":         key,
+		"ffmpeg_flags":       flags,
+		"srt_port":           srtPort,
+		"quality_preset":     qualityPreset,
+		"scene":              scene,
+		"music_starting_soon": musicStartingSoon,
+		"music_brb":          musicBRB,
+		"music_ending":       musicEnding,
+		"screensaver_urls":   screensaverURLs,
 	})
+}
+
+var validScenes = map[string]bool{"live": true, "starting_soon": true, "brb": true, "ending": true}
+
+func (s *Server) apiAdminScene(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Scene string `json:"scene"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || !validScenes[body.Scene] {
+		http.Error(w, "bad request", http.StatusBadRequest)
+		return
+	}
+	_ = s.deps.DB.SetConfig("scene", body.Scene)
+
+	// Broadcast immediately so viewers react without waiting for the next 1-second poll
+	stats := s.deps.Ingest.Stats()
+	title, _ := s.deps.DB.GetConfig("stream_title")
+	payload := hub.StreamStatusPayload{
+		Online:      stats.Online,
+		Bitrate:     stats.CurrentKbps,
+		UptimeS:     s.deps.Ingest.UptimeSeconds(),
+		ViewerCount: s.deps.Hub.ViewerCount(),
+		Title:       title,
+		Scene:       body.Scene,
+	}
+	s.deps.Hub.BroadcastMessage(hub.TypeStreamStatus, payload)
+
+	jsonResp(w, map[string]string{"status": "ok"})
 }
 
 func (s *Server) apiChatClear(w http.ResponseWriter, r *http.Request) {
