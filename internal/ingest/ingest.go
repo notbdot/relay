@@ -99,6 +99,34 @@ func (mgr *Manager) Start(ctx context.Context) {
 	}
 }
 
+// scanLines is like bufio.ScanLines but also splits on bare \r (FFmpeg progress lines).
+func scanLines(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+	for i, b := range data {
+		if b == '\n' {
+			// strip preceding \r if present
+			end := i
+			if end > 0 && data[end-1] == '\r' {
+				end--
+			}
+			return i + 1, data[:end], nil
+		}
+		if b == '\r' {
+			// bare \r — treat as line ending (FFmpeg progress output)
+			if i+1 < len(data) {
+				return i + 1, data[:i], nil
+			}
+			// \r at end of buffer: need more data to know if \r\n
+		}
+	}
+	if atEOF {
+		return len(data), data, nil
+	}
+	return 0, nil, nil
+}
+
 var bitrateRe   = regexp.MustCompile(`bitrate=\s*([\d.]+)\s*kbits/s`)
 var connectedRe = regexp.MustCompile(`Input #0|SRT source opened|Opening .* for reading|SRT connection.*succeed|Stream #0:`)
 // SRT stream ID in FFmpeg verbose logs: "Stream-ID: 'value'" or "streamid: value"
@@ -169,6 +197,7 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 
 	go func() {
 		scanner := bufio.NewScanner(stderr)
+		scanner.Split(scanLines)
 		for scanner.Scan() {
 			line := scanner.Text()
 			log.Printf("ffmpeg: %s", line)
