@@ -21,7 +21,8 @@ type ServerConfig struct {
 }
 
 type SRTConfig struct {
-	Port int `yaml:"port"`
+	Port       int `yaml:"port"`
+	CameraPort int `yaml:"camera_port"`
 }
 
 type HLSConfig struct {
@@ -42,7 +43,7 @@ type FFmpegConfig struct {
 func Load(path string) (*Config, error) {
 	cfg := &Config{
 		Server: ServerConfig{Host: "0.0.0.0", Port: 2935},
-		SRT:    SRTConfig{Port: 9999},
+		SRT:    SRTConfig{Port: 9999, CameraPort: 9998},
 		HLS: HLSConfig{
 			SegmentsDir: "./segments",
 			HLSTime:     2,
@@ -68,6 +69,11 @@ func Load(path string) (*Config, error) {
 	if v := os.Getenv("SLUICE_SRT_PORT"); v != "" {
 		if p, err := strconv.Atoi(v); err == nil {
 			cfg.SRT.Port = p
+		}
+	}
+	if v := os.Getenv("SLUICE_SRT_CAMERA_PORT"); v != "" {
+		if p, err := strconv.Atoi(v); err == nil {
+			cfg.SRT.CameraPort = p
 		}
 	}
 	if v := os.Getenv("SLUICE_DB_PATH"); v != "" {

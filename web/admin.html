@@ -500,28 +500,48 @@
   const viewerOffline = document.getElementById('viewer-offline');
   let camHls = null, viewerHls = null;
 
-  function makeHls(videoEl) {
+  function makeHls(videoEl, src) {
     if (typeof Hls === 'undefined' || !Hls.isSupported()) return null;
     const h = new Hls({ liveSyncDurationCount: 3, enableWorker: true, lowLatencyMode: true });
-    h.loadSource('/hls/live.m3u8');
+    h.loadSource(src);
     h.attachMedia(videoEl);
     h.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play().catch(() => {}));
     return h;
   }
 
+  // Camera and viewer feeds are independent — poll separately so camera
+  // can be live even when OBS isn't streaming (and vice versa).
+  function startCam()    { if (!camHls)    camHls    = makeHls(camVideo,    '/hls/camera/live.m3u8'); }
+  function startViewer() { if (!viewerHls) viewerHls = makeHls(viewerVideo, '/hls/live.m3u8'); }
+
   function updatePreviews(isOnline) {
+    // Viewer preview tracks main stream status
     if (isOnline) {
-      camOffline.classList.add('hidden');
       viewerOffline.classList.add('hidden');
-      if (!camHls)    camHls    = makeHls(camVideo);
-      if (!viewerHls) viewerHls = makeHls(viewerVideo);
+      startViewer();
     } else {
-      camOffline.classList.remove('hidden');
       viewerOffline.classList.remove('hidden');
-      if (camHls)    { camHls.destroy();    camHls    = null; }
       if (viewerHls) { viewerHls.destroy(); viewerHls = null; }
     }
   }
+
+  // Camera preview is always active — it self-manages via HLS.js error handling
+  function initCameraPreview() {
+    camHls = makeHls(camVideo, '/hls/camera/live.m3u8');
+    if (!camHls) return;
+    camHls.on(Hls.Events.ERROR, (_, d) => {
+      if (d.fatal && d.type === Hls.ErrorTypes.NETWORK_ERROR) {
+        camOffline.classList.remove('hidden');
+        camHls.destroy(); camHls = null;
+        setTimeout(initCameraPreview, 5000); // retry when camera comes online
+      }
+    });
+    camHls.on(Hls.Events.MANIFEST_PARSED, () => {
+      camOffline.classList.add('hidden');
+      camVideo.play().catch(() => {});
+    });
+  }
+  initCameraPreview();
 
   // --- Sparkline ---
   const sparkSVG  = document.getElementById('sparkline-svg');

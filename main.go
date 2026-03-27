@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 
 	"github.com/notbdot/sluice/internal/config"
@@ -71,9 +72,10 @@ func runServe() {
 		fmt.Println("  First run — stream key generated")
 		fmt.Printf("  Stream key  : %s\n", streamKey)
 	}
-	fmt.Printf("  Viewer  → http://localhost:%d/\n", cfg.Server.Port)
-	fmt.Printf("  Admin   → http://localhost:%d/admin\n", cfg.Server.Port)
-	fmt.Printf("  SRT in  → srt://localhost:%d  (stream key goes in Stream ID field)\n", cfg.SRT.Port)
+	fmt.Printf("  Viewer    → http://localhost:%d/\n", cfg.Server.Port)
+	fmt.Printf("  Admin     → http://localhost:%d/admin\n", cfg.Server.Port)
+	fmt.Printf("  SRT (OBS) → srt://localhost:%d  (stream key in Stream ID)\n", cfg.SRT.Port)
+	fmt.Printf("  SRT (cam) → srt://localhost:%d  (stream key in Stream ID)\n", cfg.SRT.CameraPort)
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -95,6 +97,7 @@ func runServe() {
 		return f
 	}
 
+	// Main ingest: OBS → /hls/live.m3u8 — this is what viewers see.
 	mgr := ingest.New(
 		cfg.FFmpeg.Path,
 		cfg.SRT.Port,
@@ -106,8 +109,22 @@ func runServe() {
 		getExtraFlags,
 		func() string { v, _ := database.GetConfig("quality_preset"); return v },
 	)
-
 	go mgr.Start(ctx)
+
+	// Camera ingest: raw camera feed → /hls/camera/live.m3u8 — admin preview only.
+	// Always source passthrough (no transcoding). Uses same stream key.
+	cameraMgr := ingest.New(
+		cfg.FFmpeg.Path,
+		cfg.SRT.CameraPort,
+		filepath.Join(cfg.HLS.SegmentsDir, "camera"),
+		cfg.HLS.HLSTime,
+		cfg.HLS.HLSListSize,
+		"",
+		getStreamKey,
+		nil,
+		func() string { return "source" },
+	)
+	go cameraMgr.Start(ctx)
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	srv := server.New(addr, &server.Deps{
