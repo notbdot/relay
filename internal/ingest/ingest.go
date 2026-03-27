@@ -109,7 +109,7 @@ var srtACLRe    = regexp.MustCompile(`#!::.*\br=([^,\s]+)`)
 func (mgr *Manager) runFFmpeg(ctx context.Context) {
 	// Listen without passphrase — authenticate via SRT stream ID instead.
 	// Clients should put the stream key in the "Stream ID" field.
-	srtURL := fmt.Sprintf("srt://0.0.0.0:%d?mode=listener&transtype=live&latency=2000", mgr.srtPort)
+	srtURL := fmt.Sprintf("srt://0.0.0.0:%d?mode=listener", mgr.srtPort)
 
 	playlist  := filepath.Join(mgr.segmentsDir, "live.m3u8")
 	segPattern := filepath.Join(mgr.segmentsDir, "live%03d.ts")
@@ -124,6 +124,10 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 	args := []string{
 		"-y",
 		"-loglevel", "verbose",
+		"-fflags", "nobuffer",
+		"-probesize", "32",
+		"-analyzeduration", "0",
+		"-f", "mpegts",
 		"-i", srtURL,
 		"-c:v", "copy",
 		"-c:a", "copy",
