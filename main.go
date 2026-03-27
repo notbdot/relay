@@ -61,19 +61,18 @@ func runServe() {
 	}
 	defer database.Close()
 
-	streamKey, adminToken, isNew, err := database.InitDefaults()
+	streamKey, _, isNew, err := database.InitDefaults()
 	if err != nil {
 		log.Fatalf("db init: %v", err)
 	}
 
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	if isNew {
-		fmt.Println("  First run — credentials generated")
+		fmt.Println("  First run — stream key generated")
 		fmt.Printf("  Stream key  : %s\n", streamKey)
-		fmt.Printf("  Admin token : %s\n", adminToken)
 	}
 	fmt.Printf("  Viewer  → http://localhost:%d/\n", cfg.Server.Port)
-	fmt.Printf("  Admin   → http://localhost:%d/admin?token=%s\n", cfg.Server.Port, adminToken)
+	fmt.Printf("  Admin   → http://localhost:%d/admin\n", cfg.Server.Port)
 	fmt.Printf("  SRT in  → srt://localhost:%d  (stream key goes in Stream ID field)\n", cfg.SRT.Port)
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
