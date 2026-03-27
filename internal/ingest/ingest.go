@@ -109,7 +109,7 @@ var srtACLRe    = regexp.MustCompile(`#!::.*\br=([^,\s]+)`)
 func (mgr *Manager) runFFmpeg(ctx context.Context) {
 	// Listen without passphrase — authenticate via SRT stream ID instead.
 	// Clients should put the stream key in the "Stream ID" field.
-	srtURL := fmt.Sprintf("srt://0.0.0.0:%d?mode=listener", mgr.srtPort)
+	srtURL := fmt.Sprintf("srt://0.0.0.0:%d?mode=listener&transtype=live&latency=2000", mgr.srtPort)
 
 	playlist  := filepath.Join(mgr.segmentsDir, "live.m3u8")
 	segPattern := filepath.Join(mgr.segmentsDir, "live%03d.ts")
@@ -215,6 +215,19 @@ func (mgr *Manager) parseLine(line string, connected *bool, streamIDChecked *boo
 				return
 			}
 			log.Printf("ingest: stream ID accepted: %q", incomingID)
+			// The SRT handshake completing with a valid key means the connection
+			// is real — mark online now rather than waiting for Input #0 which
+			// may not appear until the first segment is written.
+			if !*connected {
+				*connected = true
+				s := &Stats{Online: true, StartedAt: time.Now()}
+				mgr.statsAtomic.Store(s)
+				log.Printf("ingest: stream connected")
+				select {
+				case mgr.StatusCh <- StatusChange{Online: true}:
+				default:
+				}
+			}
 		}
 	}
 
