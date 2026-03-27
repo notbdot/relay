@@ -216,7 +216,7 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 		log.Printf("ingest: failed to start ffmpeg: %v", err)
 		return
 	}
-	log.Printf("ingest: FFmpeg pid=%d started, waiting for SRT connection...", cmd.Process.Pid)
+	log.Printf("ingest: waiting for SRT connection on :%d", mgr.srtPort)
 
 	connected := false
 	streamIDChecked := false
@@ -225,9 +225,7 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 		scanner := bufio.NewScanner(stderr)
 		scanner.Split(scanLines)
 		for scanner.Scan() {
-			line := scanner.Text()
-			log.Printf("ffmpeg: %s", line)
-			mgr.parseLine(line, &connected, &streamIDChecked, cancel)
+			mgr.parseLine(scanner.Text(), &connected, &streamIDChecked, cancel)
 		}
 	}()
 
@@ -273,7 +271,6 @@ func (mgr *Manager) parseLine(line string, connected *bool, streamIDChecked *boo
 				cancel()
 				return
 			}
-			log.Printf("ingest: stream ID accepted: %q", incomingID)
 			// The SRT handshake completing with a valid key means the connection
 			// is real — mark online now rather than waiting for Input #0 which
 			// may not appear until the first segment is written.
