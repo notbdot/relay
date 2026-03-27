@@ -31,6 +31,7 @@ type StreamStatusPayload struct {
 	UptimeS     int64   `json:"uptime_s"`
 	ViewerCount int     `json:"viewer_count"`
 	Title       string  `json:"title"`
+	Scene       string  `json:"scene"` // "live" | "starting_soon" | "brb" | "ending"
 }
 
 type ChatMessagePayload struct {
