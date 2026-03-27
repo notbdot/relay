@@ -190,6 +190,7 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 }
 
 func (mgr *Manager) parseLine(line string, connected *bool) {
+	log.Printf("ffmpeg: %s", line)
 	if !*connected {
 		if connectedRe.MatchString(line) {
 			*connected = true
