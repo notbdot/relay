@@ -100,7 +100,7 @@ func (mgr *Manager) Start(ctx context.Context) {
 }
 
 var bitrateRe   = regexp.MustCompile(`bitrate=\s*([\d.]+)\s*kbits/s`)
-var connectedRe = regexp.MustCompile(`Input #0|SRT source opened|Opening .* for reading`)
+var connectedRe = regexp.MustCompile(`Input #0|SRT source opened|Opening .* for reading|SRT connection.*succeed|Stream #0:`)
 // SRT stream ID in FFmpeg verbose logs: "Stream-ID: 'value'" or "streamid: value"
 var streamIDRe  = regexp.MustCompile(`(?i)stream.?id[=:\s]+'?([^'\n]+?)'?\s*$`)
 // SRT ACL format used by IRL Pro and some other apps: "#!::r=STREAMKEY,h=hostname,..."
@@ -126,7 +126,7 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 		"-loglevel", "verbose",
 		"-i", srtURL,
 		"-c:v", "copy",
-		"-c:a", "aac",
+		"-c:a", "copy",
 		"-f", "hls",
 		"-hls_time", strconv.Itoa(mgr.hlsTime),
 		"-hls_list_size", strconv.Itoa(mgr.hlsListSize),
