@@ -167,6 +167,7 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
 			line := scanner.Text()
+			log.Printf("ffmpeg: %s", line)
 			mgr.parseLine(line, &connected, &streamIDChecked, cancel)
 		}
 	}()
