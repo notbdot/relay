@@ -134,13 +134,14 @@ func runServe() {
 
 	addr := fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port)
 	srv := server.New(addr, &server.Deps{
-		DB:          database,
-		Hub:         h,
-		Ingest:      mgr,
-		SegmentsDir: cfg.HLS.SegmentsDir,
-		ViewerHTML:  web.ViewerHTML,
-		AdminHTML:   web.AdminHTML,
-		OverlayHTML: web.OverlayHTML,
+		DB:            database,
+		Hub:           h,
+		Ingest:        mgr,
+		SegmentsDir:   cfg.HLS.SegmentsDir,
+		AdminPassword: cfg.Server.AdminPassword,
+		ViewerHTML:    web.ViewerHTML,
+		AdminHTML:     web.AdminHTML,
+		OverlayHTML:   web.OverlayHTML,
 	})
 
 	if err := srv.Start(ctx); err != nil && err.Error() != "http: Server closed" {

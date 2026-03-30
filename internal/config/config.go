@@ -16,8 +16,9 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Host string `yaml:"host"`
-	Port int    `yaml:"port"`
+	Host          string `yaml:"host"`
+	Port          int    `yaml:"port"`
+	AdminPassword string `yaml:"admin_password"`
 }
 
 type SRTConfig struct {
@@ -65,6 +66,9 @@ func Load(path string) (*Config, error) {
 		if p, err := strconv.Atoi(v); err == nil {
 			cfg.Server.Port = p
 		}
+	}
+	if v := os.Getenv("RELAY_ADMIN_PASSWORD"); v != "" {
+		cfg.Server.AdminPassword = v
 	}
 	if v := os.Getenv("RELAY_SRT_PORT"); v != "" {
 		if p, err := strconv.Atoi(v); err == nil {

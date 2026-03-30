@@ -19,10 +19,11 @@ import (
 
 // Deps holds everything the server needs.
 type Deps struct {
-	DB          *db.DB
-	Hub         *hub.Hub
-	Ingest      *ingest.Manager
-	SegmentsDir string
+	DB            *db.DB
+	Hub           *hub.Hub
+	Ingest        *ingest.Manager
+	SegmentsDir   string
+	AdminPassword string // if set, used instead of DB token for admin auth
 	// embed fs for static files
 	ViewerHTML  []byte
 	AdminHTML   []byte
@@ -223,19 +224,25 @@ button:hover{background:#4a6a85}
 </style></head>
 <body><form method="POST" action="/admin">
 <h2>RELAY — ADMIN</h2>
-%s<input type="password" name="token" placeholder="Admin token" autofocus autocomplete="current-password">
+%s<input type="password" name="token" placeholder="Password" autofocus autocomplete="current-password">
 <button type="submit">Sign in →</button>
 </form></body></html>`
 
+func (s *Server) adminPassword() string {
+	if s.deps.AdminPassword != "" {
+		return s.deps.AdminPassword
+	}
+	tok, _ := s.deps.DB.GetConfig("admin_token")
+	return tok
+}
+
 func (s *Server) isAdminAuthed(r *http.Request) bool {
-	expected, _ := s.deps.DB.GetConfig("admin_token")
-	if expected == "" {
+	pw := s.adminPassword()
+	if pw == "" {
 		return true
 	}
-	if c, err := r.Cookie(adminCookie); err == nil && c.Value == expected {
-		return true
-	}
-	return false
+	c, err := r.Cookie(adminCookie)
+	return err == nil && c.Value == pw
 }
 
 func (s *Server) requireAdmin(next http.HandlerFunc) http.HandlerFunc {
@@ -250,12 +257,11 @@ func (s *Server) requireAdmin(next http.HandlerFunc) http.HandlerFunc {
 
 func (s *Server) adminHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
-		token := r.FormValue("token")
-		expected, _ := s.deps.DB.GetConfig("admin_token")
-		if expected != "" && token == expected {
+		pw := s.adminPassword()
+		if pw != "" && r.FormValue("token") == pw {
 			http.SetCookie(w, &http.Cookie{
 				Name:     adminCookie,
-				Value:    token,
+				Value:    pw,
 				Path:     "/",
 				SameSite: http.SameSiteStrictMode,
 				HttpOnly: true,
@@ -265,7 +271,7 @@ func (s *Server) adminHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusUnauthorized)
-		fmt.Fprintf(w, loginHTML, `<p class="err">Invalid token.</p>`)
+		fmt.Fprintf(w, loginHTML, `<p class="err">Incorrect password.</p>`)
 		return
 	}
 	if !s.isAdminAuthed(r) {
