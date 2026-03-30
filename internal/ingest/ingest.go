@@ -179,8 +179,8 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 		"-y",
 		"-loglevel", "verbose",
 		"-fflags", "nobuffer",
-		"-probesize", "32",
-		"-analyzeduration", "0",
+		"-probesize", "1000000",
+		"-analyzeduration", "1000000",
 		"-f", "mpegts",
 		"-i", srtURL,
 	}
