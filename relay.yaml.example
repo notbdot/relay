@@ -1,0 +1,25 @@
+# Relay configuration example
+# Copy to relay.yaml and edit as needed.
+# Environment variables take precedence over file values.
+
+server:
+  host: "0.0.0.0"
+  port: 2935          # RELAY_SERVER_PORT
+
+srt:
+  port: 9999          # RELAY_SRT_PORT
+  camera_port: 9998   # RELAY_SRT_CAMERA_PORT
+  # OBS setup: Server = srt://yourhost:9999
+  # Set the stream key as the SRT Stream ID in OBS advanced settings.
+
+hls:
+  segments_dir: "./segments"  # RELAY_SEGMENTS_DIR
+  hls_time: 2                 # segment duration in seconds
+  hls_list_size: 6            # segments in playlist
+
+db:
+  path: "./relay.db"          # RELAY_DB_PATH
+
+ffmpeg:
+  path: "ffmpeg"              # RELAY_FFMPEG_PATH
+  extra_flags: ""             # e.g. "-vf scale=1280:720"

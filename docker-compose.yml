@@ -1,11 +1,11 @@
 services:
-  sluice:
+  relay:
     build: .
     restart: unless-stopped
     network_mode: host     # SRT/UDP stream data gets dropped by Docker bridge NAT
     volumes:
       - ./data:/data
     environment:
-      SLUICE_SEGMENTS_DIR: "/data/segments"
-      SLUICE_DB_PATH: "/data/sluice.json"
+      RELAY_SEGMENTS_DIR: "/data/segments"
+      RELAY_DB_PATH: "/data/relay.json"
     working_dir: /data

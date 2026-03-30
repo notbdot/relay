@@ -191,8 +191,6 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 		"-hls_list_size", strconv.Itoa(mgr.hlsListSize),
 		"-hls_flags", "delete_segments+append_list",
 		"-hls_segment_filename", segPattern,
-		"-nostats",
-		"-progress", "pipe:2",
 	)
 
 	if extraFlags != "" {

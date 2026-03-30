@@ -464,7 +464,7 @@
   // --- Username ---
   function randomUsername() { return 'viewer_' + Math.floor(Math.random() * 9000 + 1000); }
 
-  let username = localStorage.getItem('sluice_username');
+  let username = localStorage.getItem('relay_username');
   const modal = document.getElementById('username-modal');
   const usernameField = document.getElementById('username-field');
   const currentUsernameDisplay = document.getElementById('current-username-display');
@@ -472,7 +472,7 @@
   function setUsername(name) {
     name = name.trim().replace(/[^a-zA-Z0-9_\-\.]/g, '').slice(0, 32) || randomUsername();
     username = name;
-    localStorage.setItem('sluice_username', username);
+    localStorage.setItem('relay_username', username);
     currentUsernameDisplay.textContent = username;
     modal.classList.add('hidden');
     reconnectWS();

@@ -1,4 +1,4 @@
-module github.com/notbdot/sluice
+module github.com/notbdot/relay
 
 go 1.22
 

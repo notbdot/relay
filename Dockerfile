@@ -6,7 +6,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /sluice .
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o /relay .
 
 
 ### Stage 2: runtime image with ffmpeg
@@ -17,7 +17,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /data
-COPY --from=builder /sluice /usr/local/bin/sluice
+COPY --from=builder /relay /usr/local/bin/relay
 
 # HTTP viewer/admin port
 EXPOSE 2935
@@ -26,5 +26,5 @@ EXPOSE 9999/udp
 
 VOLUME ["/data"]
 
-ENTRYPOINT ["sluice"]
+ENTRYPOINT ["relay"]
 CMD ["serve"]

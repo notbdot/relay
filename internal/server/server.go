@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -11,9 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/notbdot/sluice/internal/db"
-	"github.com/notbdot/sluice/internal/hub"
-	"github.com/notbdot/sluice/internal/ingest"
+	"github.com/notbdot/relay/internal/db"
+	"github.com/notbdot/relay/internal/hub"
+	"github.com/notbdot/relay/internal/ingest"
 )
 
 // Deps holds everything the server needs.
@@ -58,19 +59,20 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /", s.viewerHandler)
 	s.mux.HandleFunc("GET /hls/", s.hlsHandler)
 	s.mux.HandleFunc("GET /admin", s.adminHandler)
+	s.mux.HandleFunc("POST /admin", s.adminHandler)
 	s.mux.HandleFunc("GET /overlay", s.overlayHandler)
 	s.mux.HandleFunc("GET /ws", s.wsHandler)
 	s.mux.HandleFunc("GET /api/status", s.apiStatus)
 	s.mux.HandleFunc("GET /api/bitrate-history", s.apiBitrateHistory)
-	s.mux.HandleFunc("GET /api/admin/config", s.apiAdminConfigGet)
-	s.mux.HandleFunc("POST /api/admin/config", s.apiAdminConfig)
-	s.mux.HandleFunc("POST /api/admin/chat/clear", s.apiChatClear)
-	s.mux.HandleFunc("POST /api/admin/chat/ban", s.apiChatBan)
-	s.mux.HandleFunc("POST /api/admin/chat/delete", s.apiChatDelete)
-	s.mux.HandleFunc("POST /api/admin/scene", s.apiAdminScene)
-	s.mux.HandleFunc("POST /api/admin/stream/restart", s.apiStreamRestart)
-	s.mux.HandleFunc("GET /api/admin/sessions", s.apiSessions)
-	s.mux.HandleFunc("GET /api/admin/chat/all", s.apiAllChat)
+	s.mux.HandleFunc("GET /api/admin/config", s.requireAdmin(s.apiAdminConfigGet))
+	s.mux.HandleFunc("POST /api/admin/config", s.requireAdmin(s.apiAdminConfig))
+	s.mux.HandleFunc("POST /api/admin/chat/clear", s.requireAdmin(s.apiChatClear))
+	s.mux.HandleFunc("POST /api/admin/chat/ban", s.requireAdmin(s.apiChatBan))
+	s.mux.HandleFunc("POST /api/admin/chat/delete", s.requireAdmin(s.apiChatDelete))
+	s.mux.HandleFunc("POST /api/admin/scene", s.requireAdmin(s.apiAdminScene))
+	s.mux.HandleFunc("POST /api/admin/stream/restart", s.requireAdmin(s.apiStreamRestart))
+	s.mux.HandleFunc("GET /api/admin/sessions", s.requireAdmin(s.apiSessions))
+	s.mux.HandleFunc("GET /api/admin/chat/all", s.requireAdmin(s.apiAllChat))
 }
 
 func (s *Server) Start(ctx context.Context) error {
@@ -203,7 +205,74 @@ func (s *Server) hlsHandler(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, fullPath)
 }
 
+const adminCookie = "relay_admin_token"
+
+const loginHTML = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Relay — Admin</title>
+<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#f5f4f1;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'JetBrains Mono','IBM Plex Mono','Courier New',monospace;font-size:13px}
+form{background:#fff;padding:32px;border:1px solid rgba(0,0,0,.08);display:flex;flex-direction:column;gap:14px;min-width:300px}
+h2{font-size:11px;letter-spacing:.1em;color:#5e5c59}
+input{padding:9px 11px;border:1px solid rgba(0,0,0,.15);font-family:inherit;font-size:13px;outline:none}
+input:focus{border-color:#5a7a95}
+button{background:#5a7a95;color:#fff;border:none;padding:9px 11px;cursor:pointer;font-family:inherit;font-size:13px}
+button:hover{background:#4a6a85}
+.err{color:#b84444;font-size:12px}
+</style></head>
+<body><form method="POST" action="/admin">
+<h2>RELAY — ADMIN</h2>
+%s<input type="password" name="token" placeholder="Admin token" autofocus autocomplete="current-password">
+<button type="submit">Sign in →</button>
+</form></body></html>`
+
+func (s *Server) isAdminAuthed(r *http.Request) bool {
+	expected, _ := s.deps.DB.GetConfig("admin_token")
+	if expected == "" {
+		return true
+	}
+	if c, err := r.Cookie(adminCookie); err == nil && c.Value == expected {
+		return true
+	}
+	return false
+}
+
+func (s *Server) requireAdmin(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !s.isAdminAuthed(r) {
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next(w, r)
+	}
+}
+
 func (s *Server) adminHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost {
+		token := r.FormValue("token")
+		expected, _ := s.deps.DB.GetConfig("admin_token")
+		if expected != "" && token == expected {
+			http.SetCookie(w, &http.Cookie{
+				Name:     adminCookie,
+				Value:    token,
+				Path:     "/",
+				SameSite: http.SameSiteStrictMode,
+				HttpOnly: true,
+			})
+			http.Redirect(w, r, "/admin", http.StatusSeeOther)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusUnauthorized)
+		fmt.Fprintf(w, loginHTML, `<p class="err">Invalid token.</p>`)
+		return
+	}
+	if !s.isAdminAuthed(r) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprintf(w, loginHTML, "")
+		return
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Write(s.deps.AdminHTML)
 }
@@ -214,9 +283,7 @@ func (s *Server) overlayHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) wsHandler(w http.ResponseWriter, r *http.Request) {
-	// Admin if connecting from /admin page (checked via Referer) or explicit flag
-	referer := r.Referer()
-	isAdmin := strings.Contains(referer, "/admin") || r.URL.Query().Get("admin") == "1"
+	isAdmin := s.isAdminAuthed(r)
 
 	// Load chat history
 	msgs, err := s.deps.DB.GetRecentMessages(50)

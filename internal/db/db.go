@@ -71,7 +71,7 @@ type StreamSession struct {
 }
 
 const maxMessages = 10000
-const dataFile = "sluice.json"
+const dataFile = "relay.json"
 
 func Open(path string) (*DB, error) {
 	dir := filepath.Dir(path)

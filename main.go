@@ -9,27 +9,27 @@ import (
 	"path/filepath"
 	"syscall"
 
-	"github.com/notbdot/sluice/internal/config"
-	"github.com/notbdot/sluice/internal/db"
-	"github.com/notbdot/sluice/internal/hub"
-	"github.com/notbdot/sluice/internal/ingest"
-	"github.com/notbdot/sluice/internal/server"
-	"github.com/notbdot/sluice/web"
+	"github.com/notbdot/relay/internal/config"
+	"github.com/notbdot/relay/internal/db"
+	"github.com/notbdot/relay/internal/hub"
+	"github.com/notbdot/relay/internal/ingest"
+	"github.com/notbdot/relay/internal/server"
+	"github.com/notbdot/relay/web"
 )
 
-const usage = `Sluice — SRT live streaming server
+const usage = `Relay — SRT live streaming server
 
 Commands:
-  sluice serve              Start the streaming server
-  sluice reset-admin-token  Regenerate and print the admin token
-  sluice help               Show this help
+  relay serve              Start the streaming server
+  relay reset-admin-token  Regenerate and print the admin token
+  relay help               Show this help
 
 Configuration is loaded from sluice.yaml (if present), with environment
-variables taking precedence. See sluice.yaml.example for all options.
+variables taking precedence. See relay.yaml.example for all options.
 `
 
 func main() {
-	log.SetPrefix("[sluice] ")
+	log.SetPrefix("[relay] ")
 	log.SetFlags(log.Ltime)
 
 	cmd := "serve"
@@ -51,7 +51,7 @@ func main() {
 }
 
 func runServe() {
-	cfg, err := config.Load("sluice.yaml")
+	cfg, err := config.Load("relay.yaml")
 	if err != nil {
 		log.Fatalf("config: %v", err)
 	}
@@ -62,18 +62,24 @@ func runServe() {
 	}
 	defer database.Close()
 
-	streamKey, _, isNew, err := database.InitDefaults()
+	streamKey, adminToken, isNew, err := database.InitDefaults()
 	if err != nil {
 		log.Fatalf("db init: %v", err)
 	}
 
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	if isNew {
-		fmt.Println("  First run — stream key generated")
+		fmt.Println("  First run — credentials generated")
 		fmt.Printf("  Stream key  : %s\n", streamKey)
+		fmt.Printf("  Admin token : %s\n", adminToken)
 	}
-	fmt.Printf("  Viewer    → http://localhost:%d/\n", cfg.Server.Port)
-	fmt.Printf("  Admin     → http://localhost:%d/admin\n", cfg.Server.Port)
+	fmt.Printf("  Viewer → http://localhost:%d/\n", cfg.Server.Port)
+	fmt.Printf("  Admin  → http://localhost:%d/admin\n", cfg.Server.Port)
+	if isNew {
+		fmt.Printf("           (token shown above — save it!)\n")
+	} else {
+		fmt.Printf("           (use 'relay reset-admin-token' if locked out)\n")
+	}
 	fmt.Printf("  SRT (OBS) → srt://localhost:%d  (stream key in Stream ID)\n", cfg.SRT.Port)
 	fmt.Printf("  SRT (cam) → srt://localhost:%d  (stream key in Stream ID)\n", cfg.SRT.CameraPort)
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -144,7 +150,7 @@ func runServe() {
 }
 
 func runResetAdminToken() {
-	cfg, err := config.Load("sluice.yaml")
+	cfg, err := config.Load("relay.yaml")
 	if err != nil {
 		log.Fatalf("config: %v", err)
 	}

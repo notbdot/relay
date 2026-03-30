@@ -49,7 +49,7 @@ func Load(path string) (*Config, error) {
 			HLSTime:     2,
 			HLSListSize: 6,
 		},
-		DB:     DBConfig{Path: "./sluice.db"},
+		DB:     DBConfig{Path: "./relay.db"},
 		FFmpeg: FFmpegConfig{Path: "ffmpeg"},
 	}
 
@@ -61,28 +61,28 @@ func Load(path string) (*Config, error) {
 	}
 
 	// env overrides
-	if v := os.Getenv("SLUICE_SERVER_PORT"); v != "" {
+	if v := os.Getenv("RELAY_SERVER_PORT"); v != "" {
 		if p, err := strconv.Atoi(v); err == nil {
 			cfg.Server.Port = p
 		}
 	}
-	if v := os.Getenv("SLUICE_SRT_PORT"); v != "" {
+	if v := os.Getenv("RELAY_SRT_PORT"); v != "" {
 		if p, err := strconv.Atoi(v); err == nil {
 			cfg.SRT.Port = p
 		}
 	}
-	if v := os.Getenv("SLUICE_SRT_CAMERA_PORT"); v != "" {
+	if v := os.Getenv("RELAY_SRT_CAMERA_PORT"); v != "" {
 		if p, err := strconv.Atoi(v); err == nil {
 			cfg.SRT.CameraPort = p
 		}
 	}
-	if v := os.Getenv("SLUICE_DB_PATH"); v != "" {
+	if v := os.Getenv("RELAY_DB_PATH"); v != "" {
 		cfg.DB.Path = v
 	}
-	if v := os.Getenv("SLUICE_SEGMENTS_DIR"); v != "" {
+	if v := os.Getenv("RELAY_SEGMENTS_DIR"); v != "" {
 		cfg.HLS.SegmentsDir = v
 	}
-	if v := os.Getenv("SLUICE_FFMPEG_PATH"); v != "" {
+	if v := os.Getenv("RELAY_FFMPEG_PATH"); v != "" {
 		cfg.FFmpeg.Path = v
 	}
 
