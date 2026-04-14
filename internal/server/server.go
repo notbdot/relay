@@ -224,7 +224,6 @@ const loginHTML = `<!DOCTYPE html>
 <style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{background:#f5f4f1;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'JetBrains Mono','IBM Plex Mono','Courier New',monospace;font-size:13px}
 form{background:#fff;padding:32px;border:1px solid rgba(0,0,0,.08);display:flex;flex-direction:column;gap:14px;min-width:300px}
-h2{font-size:11px;letter-spacing:.1em;color:#5e5c59}
 input{padding:9px 11px;border:1px solid rgba(0,0,0,.15);font-family:inherit;font-size:13px;outline:none}
 input:focus{border-color:#5a7a95}
 button{background:#5a7a95;color:#fff;border:none;padding:9px 11px;cursor:pointer;font-family:inherit;font-size:13px}
@@ -232,7 +231,11 @@ button:hover{background:#4a6a85}
 .err{color:#b84444;font-size:12px}
 </style></head>
 <body><form method="POST" action="/admin">
-<h2>RELAY — ADMIN</h2>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 148 44" width="111" height="33">
+  <polyline points="8,6 22,22 8,38"  fill="none" stroke="#1a1917" stroke-width="2.5" stroke-linejoin="miter" stroke-linecap="square"/>
+  <polyline points="20,6 34,22 20,38" fill="none" stroke="#5a7a95" stroke-width="2.5" stroke-linejoin="miter" stroke-linecap="square"/>
+  <text x="50" y="29" font-family="'JetBrains Mono','IBM Plex Mono','Courier New',monospace" font-size="18" font-weight="700" fill="#1a1917" letter-spacing="0.12em">RELAY</text>
+</svg>
 %s<input type="password" name="token" placeholder="Password" autofocus autocomplete="current-password">
 <button type="submit">Sign in →</button>
 </form></body></html>`
