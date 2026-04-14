@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -194,6 +195,14 @@ func (s *Server) hlsHandler(w http.ResponseWriter, r *http.Request) {
 
 	fullPath := filepath.Join(s.deps.SegmentsDir, path)
 
+	// Defense-in-depth: ensure resolved path stays inside segments dir
+	absSegDir, _ := filepath.Abs(s.deps.SegmentsDir)
+	absPath, _ := filepath.Abs(fullPath)
+	if !strings.HasPrefix(absPath, absSegDir+string(filepath.Separator)) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
 	// Set appropriate content types
 	if strings.HasSuffix(path, ".m3u8") {
 		w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
@@ -242,7 +251,10 @@ func (s *Server) isAdminAuthed(r *http.Request) bool {
 		return true
 	}
 	c, err := r.Cookie(adminCookie)
-	return err == nil && c.Value == pw
+	if err != nil {
+		return false
+	}
+	return subtle.ConstantTimeCompare([]byte(c.Value), []byte(pw)) == 1
 }
 
 func (s *Server) requireAdmin(next http.HandlerFunc) http.HandlerFunc {
@@ -318,6 +330,15 @@ func (s *Server) wsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	username := r.URL.Query().Get("username")
+	if !isAdmin {
+		// Strip brackets to prevent non-admins from impersonating [admin] etc.
+		username = strings.Map(func(r rune) rune {
+			if r == '[' || r == ']' {
+				return -1
+			}
+			return r
+		}, username)
+	}
 	if username == "" {
 		username = "viewer"
 	}

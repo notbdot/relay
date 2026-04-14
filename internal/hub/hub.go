@@ -285,7 +285,7 @@ func (c *Client) readPump() {
 				continue
 			}
 			if OnChatMessage != nil {
-				OnChatMessage(c, p.Username, p.Message)
+				OnChatMessage(c, c.username, p.Message)
 			}
 
 		default:
