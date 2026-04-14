@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 148 44" width="148" height="44">
+  <rect width="148" height="44" fill="#1a1917"/>
+  <!-- Mark: double chevron -->
+  <polyline points="8,6 22,22 8,38"  fill="none" stroke="#f5f4f1" stroke-width="2.5" stroke-linejoin="miter" stroke-linecap="square"/>
+  <polyline points="20,6 34,22 20,38" fill="none" stroke="#5a7a95" stroke-width="2.5" stroke-linejoin="miter" stroke-linecap="square"/>
+  <!-- Wordmark -->
+  <text x="50" y="29" font-family="'JetBrains Mono','IBM Plex Mono','Courier New',monospace" font-size="18" font-weight="700" fill="#f5f4f1" letter-spacing="0.12em">RELAY</text>
+</svg>

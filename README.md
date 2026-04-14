@@ -1,4 +1,4 @@
-# Relay
+<img src="brand/logo.svg" alt="Relay" width="148"><br><br>
 
 Self-hosted SRT live streaming server. Accepts an OBS stream over SRT, transcodes to HLS, and serves a viewer page with live chat. Built as a single Go binary with no database dependencies.
 
