@@ -1,6 +1,8 @@
 services:
   relay:
-    build: .
+    image: ghcr.io/notbdot/relay:latest
+    # To build locally instead: comment out image, uncomment build
+    # build: .
     restart: unless-stopped
     network_mode: host     # SRT/UDP stream data gets dropped by Docker bridge NAT
     volumes:
