@@ -221,23 +221,28 @@ const loginHTML = `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Relay — Admin</title>
-<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{background:#f5f4f1;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'JetBrains Mono','IBM Plex Mono','Courier New',monospace;font-size:13px}
-form{background:#fff;padding:32px;border:1px solid rgba(0,0,0,.08);display:flex;flex-direction:column;gap:14px;min-width:300px}
-input{padding:9px 11px;border:1px solid rgba(0,0,0,.15);font-family:inherit;font-size:13px;outline:none}
-input:focus{border-color:#5a7a95}
-button{background:#5a7a95;color:#fff;border:none;padding:9px 11px;cursor:pointer;font-family:inherit;font-size:13px}
-button:hover{background:#4a6a85}
-.err{color:#b84444;font-size:12px}
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-mono/style.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:#09090b;display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:'Geist Sans','Inter',system-ui,sans-serif;font-size:13px;color:#fafafa}
+form{background:#0e0e11;border:1px solid #27272a;border-radius:8px;padding:32px;display:flex;flex-direction:column;gap:14px;min-width:300px}
+input{padding:9px 11px;background:#18181b;border:1px solid #27272a;border-radius:6px;font-family:'Geist Mono','Courier New',monospace;font-size:13px;color:#fafafa;outline:none}
+input:focus{border-color:#52525b}
+input::placeholder{color:#52525b}
+button{background:#fafafa;color:#09090b;border:none;border-radius:6px;padding:9px 11px;cursor:pointer;font-family:inherit;font-size:13px;font-weight:500}
+button:hover{background:#e4e4e7}
+.err{color:#f87171;font-size:12px;font-family:'Geist Mono','Courier New',monospace}
 </style></head>
 <body><form method="POST" action="/admin">
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 148 44" width="111" height="33">
-  <polyline points="8,6 22,22 8,38"  fill="none" stroke="#1a1917" stroke-width="2.5" stroke-linejoin="miter" stroke-linecap="square"/>
+  <polyline points="8,6 22,22 8,38"  fill="none" stroke="#fafafa" stroke-width="2.5" stroke-linejoin="miter" stroke-linecap="square"/>
   <polyline points="20,6 34,22 20,38" fill="none" stroke="#5a7a95" stroke-width="2.5" stroke-linejoin="miter" stroke-linecap="square"/>
-  <text x="50" y="29" font-family="'JetBrains Mono','IBM Plex Mono','Courier New',monospace" font-size="18" font-weight="700" fill="#1a1917" letter-spacing="0.12em">RELAY</text>
+  <text x="50" y="29" font-family="'Geist Mono','Courier New',monospace" font-size="18" font-weight="700" fill="#fafafa" letter-spacing="0.12em">RELAY</text>
 </svg>
 %s<input type="password" name="token" placeholder="Password" autofocus autocomplete="current-password">
-<button type="submit">Sign in →</button>
+<button type="submit">Sign in</button>
 </form></body></html>`
 
 func (s *Server) adminPassword() string {
@@ -636,7 +641,7 @@ func jsonResp(w http.ResponseWriter, v any) {
 
 // usernameColor deterministically maps a username to a muted accent color.
 func usernameColor(username string) string {
-	colors := []string{"#b07d3e", "#7a6fa8", "#4a8fa0", "#7a8f4a", "#a06b6b", "#6b8faa"}
+	colors := []string{"#f59e0b", "#8b5cf6", "#06b6d4", "#10b981", "#f43f5e", "#3b82f6"}
 	var h uint32
 	for _, c := range username {
 		h = h*31 + uint32(c)
