@@ -4,29 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Live Stream</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-mono/style.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg:      #f5f4f1;
-    --surface: #ffffff;
-    --surface2: #eceae5;
-    --border:  rgba(0,0,0,0.08);
-    --fg:      #1a1917;
-    --muted:   #5e5c59;
-    --accent:  #5a7a95;
-    --live:    #3d9e60;
-    --chat-w:  300px;
+    --bg:       #09090b;
+    --card:     #0e0e11;
+    --surface:  #18181b;
+    --surface2: #27272a;
+    --border:   #27272a;
+    --text:     #fafafa;
+    --text2:    #e4e4e7;
+    --muted:    #71717a;
+    --live:     #4ade80;
+    --chat-w:   280px;
   }
 
   html, body {
     height: 100%;
     background: var(--bg);
-    color: var(--fg);
-    font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Mono', 'Courier New', monospace;
+    color: var(--text);
+    font-family: 'Geist', system-ui, sans-serif;
     font-size: 13px;
     -webkit-font-smoothing: antialiased;
     overflow: hidden;
@@ -51,7 +51,7 @@
   /* === Player === */
   #player-wrap {
     position: relative;
-    background: #0d0d0d;
+    background: #09090b;
     overflow: hidden;
     width: 100%;
     aspect-ratio: 16/9;
@@ -64,7 +64,7 @@
     height: 100%;
     display: block;
     object-fit: contain;
-    background: #0d0d0d;
+    background: #09090b;
   }
 
   #offline-overlay {
@@ -74,7 +74,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: #0d0d0d;
+    background: #09090b;
     gap: 12px;
     opacity: 1;
     transition: opacity 200ms linear;
@@ -82,11 +82,11 @@
   #offline-overlay.hidden { opacity: 0; pointer-events: none; }
 
   #offline-label {
-    color: #444;
+    color: #3f3f46;
     font-size: 9px;
     letter-spacing: 0.18em;
     text-transform: uppercase;
-    font-family: 'JetBrains Mono', 'IBM Plex Mono', monospace;
+    font-family: 'Geist Mono', 'JetBrains Mono', monospace;
   }
 
   /* === Stream meta === */
@@ -121,7 +121,7 @@
     font-size: 11px;
     font-weight: 500;
     letter-spacing: 0.02em;
-    color: var(--fg);
+    color: var(--text);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -139,18 +139,18 @@
   /* === Sync button === */
   #sync-btn {
     display: none;
-    background: none;
-    border: 1px solid var(--border);
+    background: transparent;
+    border: none;
     color: var(--muted);
     font-family: inherit;
     font-size: 10px;
     letter-spacing: 0.08em;
     padding: 3px 9px;
     cursor: pointer;
-    transition: color 100ms linear, border-color 100ms linear;
+    transition: color 150ms ease;
     flex-shrink: 0;
   }
-  #sync-btn:hover { color: var(--accent); border-color: var(--accent); }
+  #sync-btn:hover { color: var(--text); }
   #sync-btn.visible { display: block; }
 
   /* === Quality picker === */
@@ -158,17 +158,17 @@
 
   #quality-btn {
     display: none;
-    background: none;
-    border: 1px solid var(--border);
+    background: transparent;
+    border: none;
     color: var(--muted);
     font-family: inherit;
     font-size: 10px;
     letter-spacing: 0.08em;
     padding: 3px 9px;
     cursor: pointer;
-    transition: color 100ms linear, border-color 100ms linear;
+    transition: color 150ms ease;
   }
-  #quality-btn:hover { color: var(--accent); border-color: var(--accent); }
+  #quality-btn:hover { color: var(--text); }
   #quality-btn.visible { display: block; }
 
   #quality-menu {
@@ -177,6 +177,7 @@
     right: 0;
     background: var(--surface);
     border: 1px solid var(--border);
+    border-radius: 6px;
     overflow: hidden;
     min-width: 120px;
     z-index: 50;
@@ -185,16 +186,16 @@
 
   .quality-option {
     padding: 7px 12px;
-    font-size: 11px;
+    font-size: 12px;
     cursor: pointer;
     color: var(--muted);
     font-family: inherit;
     border-bottom: 1px solid var(--border);
-    transition: background 80ms linear;
+    transition: background 150ms ease;
   }
   .quality-option:last-child { border-bottom: none; }
-  .quality-option:hover { background: var(--surface2); color: var(--fg); }
-  .quality-option.active { color: var(--accent); }
+  .quality-option:hover { background: var(--surface2); }
+  .quality-option.active { color: var(--text); }
 
   /* === Chat panel === */
   #chat-panel {
@@ -203,21 +204,22 @@
     display: flex;
     flex-direction: column;
     height: 100vh;
-    padding: 20px 16px 16px;
+    padding: 16px;
+    background: var(--card);
     border-left: 1px solid var(--border);
     overflow: hidden;
   }
 
   #chat-header {
-    font-size: 9px;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.06em;
     color: var(--muted);
     padding-bottom: 10px;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
-  #chat-header .arrow { color: var(--accent); margin-right: 6px; }
+  #chat-header .arrow { margin-right: 6px; }
 
   #chat-messages {
     flex: 1;
@@ -235,11 +237,13 @@
     display: flex;
     gap: 6px;
     padding: 5px 4px;
-    font-size: 12px;
+    font-size: 13px;
+    font-family: 'Geist', system-ui, sans-serif;
     line-height: 1.45;
     animation: msgIn 120ms linear both;
+    transition: background 150ms ease;
   }
-  .chat-msg:hover { background: var(--surface2); }
+  .chat-msg:hover { background: var(--surface); }
 
   @keyframes msgIn {
     from { opacity: 0; }
@@ -247,12 +251,13 @@
   }
 
   .chat-username {
-    font-weight: 700;
-    font-size: 11px;
+    font-family: 'Geist Mono', 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 12px;
     white-space: nowrap;
     flex-shrink: 0;
   }
-  .chat-text { color: var(--fg); word-break: break-word; }
+  .chat-text { color: var(--text); word-break: break-word; }
 
   /* === Chat input === */
   #chat-input-area {
@@ -275,52 +280,55 @@
   #change-username-btn {
     background: none;
     border: none;
-    color: var(--accent);
+    color: var(--muted);
     cursor: pointer;
     font-size: 10px;
     padding: 0;
     font-family: inherit;
-    transition: opacity 100ms linear;
+    transition: color 150ms ease;
   }
-  #change-username-btn:hover { opacity: 0.7; }
+  #change-username-btn:hover { color: var(--text); }
 
   #chat-form { display: flex; }
 
   #chat-input {
     flex: 1;
-    background: var(--surface);
+    background: var(--bg);
     border: 1px solid var(--border);
     border-right: none;
-    color: var(--fg);
+    border-top-left-radius: 6px;
+    border-bottom-left-radius: 6px;
+    color: var(--text);
     font-family: inherit;
-    font-size: 12px;
-    padding: 7px 10px;
+    font-size: 13px;
+    padding: 8px 12px;
     outline: none;
-    transition: border-color 100ms linear;
+    transition: border-color 150ms ease;
   }
-  #chat-input:focus { border-color: var(--accent); }
+  #chat-input:focus { border-color: var(--text); }
   #chat-input::placeholder { color: var(--muted); }
 
   #chat-send {
-    background: var(--fg);
-    border: 1px solid var(--fg);
+    background: var(--text);
+    border: none;
+    border-top-right-radius: 6px;
+    border-bottom-right-radius: 6px;
     color: var(--bg);
     cursor: pointer;
     font-family: inherit;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 500;
-    padding: 7px 13px;
-    letter-spacing: 0.06em;
-    transition: opacity 100ms linear;
+    padding: 8px 13px;
+    transition: opacity 150ms ease;
     white-space: nowrap;
   }
-  #chat-send:hover { opacity: 0.8; }
+  #chat-send:hover { opacity: 0.85; }
 
   /* === Username modal === */
   #username-modal {
     position: fixed;
     inset: 0;
-    background: rgba(245,244,241,0.92);
+    background: rgba(0,0,0,0.85);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -332,49 +340,51 @@
   @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
   #username-dialog {
-    background: var(--surface);
-    border: 1px solid rgba(0,0,0,0.12);
-    padding: 28px 30px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 24px;
     width: 320px;
   }
 
   #username-dialog h3 {
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 400;
     text-transform: uppercase;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.06em;
     color: var(--muted);
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
 
   #username-field {
     width: 100%;
     background: var(--bg);
     border: 1px solid var(--border);
-    color: var(--fg);
+    border-radius: 6px;
+    color: var(--text);
     font-family: inherit;
     font-size: 13px;
     padding: 8px 10px;
     outline: none;
-    transition: border-color 100ms linear;
+    transition: border-color 150ms ease;
     margin-bottom: 10px;
   }
-  #username-field:focus { border-color: var(--accent); }
+  #username-field:focus { border-color: var(--text); }
 
   #username-submit {
     width: 100%;
-    background: var(--fg);
+    background: var(--text);
     border: none;
+    border-radius: 6px;
     color: var(--bg);
     cursor: pointer;
     font-family: inherit;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 500;
     padding: 9px;
-    letter-spacing: 0.08em;
-    transition: opacity 100ms linear;
+    transition: opacity 150ms ease;
   }
-  #username-submit:hover { opacity: 0.82; }
+  #username-submit:hover { opacity: 0.85; }
 
   /* === Mobile === */
   @media (max-width: 720px) {
@@ -402,7 +412,7 @@
       <video id="video" controls playsinline></video>
       <div id="offline-overlay">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 44" width="40" height="44">
-          <polyline points="8,6 22,22 8,38"  fill="none" stroke="#555" stroke-width="2.5" stroke-linejoin="miter" stroke-linecap="square"/>
+          <polyline points="8,6 22,22 8,38"  fill="none" stroke="#3f3f46" stroke-width="2.5" stroke-linejoin="miter" stroke-linecap="square"/>
           <polyline points="20,6 34,22 20,38" fill="none" stroke="#5a7a95" stroke-width="2.5" stroke-linejoin="miter" stroke-linecap="square"/>
         </svg>
         <span id="offline-label">Stream offline</span>
@@ -606,7 +616,7 @@
 
   // --- Chat ---
   const chatMessages = document.getElementById('chat-messages');
-  const COLORS = ['#b07d3e','#7a6fa8','#4a8fa0','#7a8f4a','#a06b6b','#6b8faa'];
+  const COLORS = ['#f59e0b','#8b5cf6','#06b6d4','#10b981','#f43f5e','#3b82f6'];
 
   function usernameColor(u) {
     let h = 0;

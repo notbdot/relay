@@ -4,114 +4,116 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Relay — Admin</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-sans/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts/geist-mono/style.css">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg:      #f5f4f1;
-    --surface: #ffffff;
-    --surface2: #eceae5;
-    --border:  rgba(0,0,0,0.08);
-    --fg:      #1a1917;
-    --muted:   #5e5c59;
-    --accent:  #5a7a95;
-    --live:    #3d9e60;
-    --warn:    #c27d3a;
-    --err:     #b84444;
+    --bg:      #09090b;
+    --card:    #0e0e11;
+    --surface: #18181b;
+    --surface2: #27272a;
+    --border:  #27272a;
+    --text:    #fafafa;
+    --text2:   #e4e4e7;
+    --muted:   #71717a;
+    --muted2:  #52525b;
+    --live:    #4ade80;
+    --err:     #f87171;
+    --warn:    #facc15;
   }
 
   html {
     background: var(--bg);
-    color: var(--fg);
-    font-family: 'JetBrains Mono', 'IBM Plex Mono', 'Fira Mono', 'Courier New', monospace;
+    color: var(--text);
+    font-family: 'Geist', system-ui, -apple-system, sans-serif;
     font-size: 13px;
     -webkit-font-smoothing: antialiased;
   }
   body { min-height: 100vh; }
 
-  /* --- Layout --- */
-  #app { max-width: 1200px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 1px; }
-  #topbar { padding: 16px 0 12px; }
+  #app { max-width: 1200px; margin: 0 auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  #topbar { padding: 8px 0 4px; }
 
-  /* --- Status bar --- */
+  /* --- Stat cards --- */
   #statusbar {
     display: grid;
-    grid-template-columns: auto auto auto auto 1fr;
-    border: 1px solid var(--border);
-    background: var(--surface);
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
   }
-
   .sb-cell {
-    padding: 13px 20px;
-    border-right: 1px solid var(--border);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
   }
-  .sb-cell:last-child { border-right: none; }
-
-  .sb-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.18em; color: var(--muted); }
-  .sb-value { font-size: 1.25em; font-weight: 700; letter-spacing: -0.02em; }
+  .sb-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+  .sb-value { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; font-family: 'Geist Mono', 'JetBrains Mono', monospace; }
 
   #status-indicator { color: var(--err); }
   #status-indicator.live { color: var(--live); }
-  #uptime-val  { color: var(--live); }
-  #bitrate-val { color: var(--accent); }
-  #viewers-val { color: var(--fg); }
+  #uptime-val, #bitrate-val, #viewers-val { color: var(--text); }
 
-  /* --- Section --- */
-  .section { border: 1px solid var(--border); margin-top: -1px; background: var(--surface); }
-
+  /* --- Section cards --- */
+  .section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
   .section-header {
-    padding: 9px 16px;
+    padding: 10px 16px;
     border-bottom: 1px solid var(--border);
-    font-size: 9px;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.06em;
     color: var(--muted);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: var(--bg);
   }
-  .section-header .arrow { color: var(--accent); margin-right: 7px; }
 
   /* --- Preview monitors --- */
-  #preview-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 10px 16px 14px; }
-  .preview-pane { display: flex; flex-direction: column; gap: 5px; }
-  .preview-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--muted); }
-
+  #preview-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 12px 16px; }
+  .preview-pane { display: flex; flex-direction: column; gap: 6px; }
+  .preview-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
   .preview-wrap {
     position: relative;
-    background: #0d0d0d;
+    background: #000;
     width: 100%;
     aspect-ratio: 16/9;
     overflow: hidden;
+    border-radius: 4px;
   }
-  .preview-wrap video { width: 100%; height: 100%; display: block; object-fit: contain; background: #0d0d0d; }
-
+  .preview-wrap video { width: 100%; height: 100%; display: block; object-fit: contain; }
   .preview-offline {
     position: absolute; inset: 0;
     display: flex; align-items: center; justify-content: center;
-    background: #0d0d0d;
-    transition: opacity 300ms;
+    background: #000;
+    transition: opacity 200ms ease;
   }
   .preview-offline.hidden { opacity: 0; pointer-events: none; }
-  .preview-offline span { color: #555; font-size: 8px; text-transform: uppercase; letter-spacing: 0.14em; }
+  .preview-offline span { color: var(--muted2); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; }
 
   /* --- Sparkline --- */
   #sparkline-body { padding: 12px 16px 14px; }
   #sparkline-wrap { position: relative; height: 56px; }
   #sparkline-svg { width: 100%; height: 56px; }
-  #sparkline-zero { position: absolute; bottom: 0; left: 0; font-size: 9px; color: var(--muted); }
-  #sparkline-peak { position: absolute; top: 0; left: 0; font-size: 9px; color: var(--muted); }
+  #sparkline-zero { position: absolute; bottom: 0; left: 0; font-size: 10px; color: var(--muted); font-family: 'Geist Mono', monospace; }
+  #sparkline-peak { position: absolute; top: 0; left: 0; font-size: 10px; color: var(--muted); font-family: 'Geist Mono', monospace; }
 
   /* --- Two-column --- */
-  #columns { display: grid; grid-template-columns: 55fr 45fr; gap: 0; margin-top: -1px; }
-  #columns > * { border: 1px solid var(--border); margin-left: -1px; background: var(--surface); }
+  #columns { display: grid; grid-template-columns: 55fr 45fr; gap: 8px; }
+  #columns > * {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
   #col-right { display: flex; flex-direction: column; overflow-y: auto; }
 
   /* --- Chat --- */
@@ -130,37 +132,38 @@
     display: flex;
     align-items: flex-start;
     gap: 10px;
-    padding: 6px 16px;
+    padding: 7px 16px;
     border-bottom: 1px solid var(--border);
+    transition: background 150ms ease;
   }
-  .chat-row:hover { background: rgba(0,0,0,0.025); }
+  .chat-row:hover { background: var(--surface); }
   .chat-row.deleted { opacity: 0.25; text-decoration: line-through; }
   .chat-row.banned-msg { opacity: 0.2; }
 
-  .chat-ts   { color: var(--muted); font-size: 10px; white-space: nowrap; padding-top: 1px; width: 46px; flex-shrink: 0; }
-  .chat-user { font-weight: 700; white-space: nowrap; flex-shrink: 0; min-width: 90px; }
-  .chat-text { flex: 1; color: var(--fg); word-break: break-word; }
+  .chat-ts   { color: var(--muted); font-size: 11px; white-space: nowrap; padding-top: 1px; width: 40px; flex-shrink: 0; font-family: 'Geist Mono', monospace; }
+  .chat-user { font-weight: 500; white-space: nowrap; flex-shrink: 0; min-width: 90px; font-family: 'Geist Mono', monospace; font-size: 12px; }
+  .chat-text { flex: 1; color: var(--text2); word-break: break-word; }
 
-  .chat-actions { display: flex; gap: 5px; flex-shrink: 0; opacity: 0; transition: opacity 80ms; }
+  .chat-actions { display: flex; gap: 4px; flex-shrink: 0; opacity: 0; transition: opacity 150ms ease; }
   .chat-row:hover .chat-actions { opacity: 1; }
 
   .act-btn {
-    background: none;
+    background: transparent;
     border: 1px solid transparent;
+    border-radius: 4px;
     color: var(--muted);
     cursor: pointer;
     font-family: inherit;
-    font-size: 10px;
+    font-size: 11px;
     padding: 2px 6px;
-    transition: color 80ms, border-color 80ms;
+    transition: all 150ms ease;
   }
-  .act-btn.del:hover { color: var(--warn);  border-color: var(--warn); }
-  .act-btn.ban:hover { color: var(--err);   border-color: var(--err);  }
+  .act-btn.del:hover { color: var(--warn); border-color: #78350f; background: #422006; }
+  .act-btn.ban:hover { color: var(--err);  border-color: #7f1d1d; background: #450a0a; }
 
   /* --- Admin send --- */
   .admin-send-row {
     display: flex;
-    gap: 0;
     border-top: 1px solid var(--border);
     flex-shrink: 0;
   }
@@ -168,127 +171,124 @@
     flex: 1;
     background: transparent;
     border: none;
-    border-right: 1px solid var(--border);
-    color: var(--fg);
+    color: var(--text);
     font-family: inherit;
-    font-size: 12px;
-    padding: 9px 12px;
+    font-size: 13px;
+    padding: 10px 14px;
     outline: none;
   }
   .admin-msg-input::placeholder { color: var(--muted); }
   .admin-send-btn {
     background: none;
     border: none;
-    color: var(--accent);
+    color: var(--muted);
     cursor: pointer;
     font-family: inherit;
-    font-size: 11px;
-    padding: 9px 14px;
-    letter-spacing: 0.06em;
-    transition: background 80ms;
+    font-size: 13px;
+    padding: 10px 14px;
+    transition: color 150ms ease;
   }
-  .admin-send-btn:hover { background: rgba(90,122,149,0.08); }
+  .admin-send-btn:hover { color: var(--text); }
 
   /* --- Config --- */
-  .config-form { padding: 16px; display: flex; flex-direction: column; gap: 13px; }
-
-  .field-group { display: flex; flex-direction: column; gap: 5px; }
-  .field-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.16em; color: var(--muted); }
+  .config-form { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  .field-group { display: flex; flex-direction: column; gap: 6px; }
+  .field-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
 
   .field-input {
     background: var(--bg);
     border: 1px solid var(--border);
-    color: var(--fg);
+    border-radius: 6px;
+    color: var(--text);
     font-family: inherit;
     font-size: 13px;
-    padding: 7px 10px;
+    padding: 8px 12px;
     outline: none;
     width: 100%;
-    transition: border-color 80ms;
+    transition: border-color 150ms ease;
   }
-  .field-input:focus { border-color: var(--accent); }
+  .field-input:focus { border-color: var(--text); }
+  select.field-input { appearance: none; cursor: pointer; }
 
-  select.field-input {
-    appearance: none;
-    cursor: pointer;
-  }
-
-  .field-row { display: flex; gap: 0; align-items: stretch; }
-  .key-mask { flex: 1; }
+  .field-row { display: flex; align-items: stretch; }
+  .key-mask { flex: 1; border-top-right-radius: 0; border-bottom-right-radius: 0; }
 
   .icon-btn {
-    background: none;
+    background: transparent;
     border: 1px solid var(--border);
     border-left: none;
     color: var(--muted);
     cursor: pointer;
     font-family: inherit;
-    font-size: 10px;
-    padding: 0 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    transition: color 80ms, border-color 80ms;
+    font-size: 12px;
+    padding: 0 12px;
+    transition: all 150ms ease;
     white-space: nowrap;
   }
-  .icon-btn:hover { color: var(--accent); border-color: var(--accent); }
+  .icon-btn:last-child { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
+  .icon-btn:hover { background: var(--surface); color: var(--text); }
 
   .save-row { display: flex; align-items: center; gap: 12px; }
   .save-btn {
-    background: none;
-    border: 1px solid var(--accent);
-    color: var(--accent);
+    background: var(--text);
+    border: none;
+    border-radius: 6px;
+    color: var(--bg);
     cursor: pointer;
     font-family: inherit;
-    font-size: 11px;
-    padding: 6px 14px;
-    letter-spacing: 0.08em;
-    transition: background 80ms;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 16px;
+    transition: opacity 150ms ease;
   }
-  .save-btn:hover { background: rgba(90,122,149,0.08); }
-
-  .save-status { font-size: 11px; color: var(--live); opacity: 0; transition: opacity 250ms; }
+  .save-btn:hover { opacity: 0.85; }
+  .save-status { font-size: 12px; color: var(--live); opacity: 0; transition: opacity 250ms; }
   .save-status.show { opacity: 1; }
 
   /* --- Stream control --- */
-  .control-row { padding: 13px 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .control-row { padding: 14px 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
   /* --- Sessions --- */
   #session-table { width: 100%; border-collapse: collapse; }
   #session-table th {
     text-align: left;
-    padding: 8px 16px;
-    font-size: 9px;
+    padding: 10px 16px;
+    font-size: 11px;
     text-transform: uppercase;
-    letter-spacing: 0.15em;
+    letter-spacing: 0.06em;
     color: var(--muted);
     border-bottom: 1px solid var(--border);
-    font-weight: 400;
-    background: var(--bg);
+    font-weight: 500;
+    background: var(--card);
   }
-  #session-table td { padding: 7px 16px; border-bottom: 1px solid var(--border); font-size: 12px; }
-  .session-row:hover { background: rgba(0,0,0,0.025); }
+  #session-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text2);
+    font-family: 'Geist Mono', monospace;
+  }
+  .session-row:hover { background: var(--surface); }
 
   /* --- Buttons --- */
   .text-btn {
-    background: none;
+    background: transparent;
     border: 1px solid var(--border);
+    border-radius: 6px;
     color: var(--muted);
     cursor: pointer;
     font-family: inherit;
-    font-size: 10px;
-    padding: 5px 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    transition: color 80ms, border-color 80ms;
+    font-size: 12px;
+    padding: 6px 12px;
+    transition: all 150ms ease;
   }
-  .text-btn:hover { color: var(--fg); border-color: var(--muted); }
-  .text-btn.danger:hover { color: var(--err); border-color: var(--err); }
-  .text-btn.warn:hover   { color: var(--warn); border-color: var(--warn); }
+  .text-btn:hover { background: var(--surface); color: var(--text); border-color: var(--surface2); }
+  .text-btn.danger:hover { color: var(--err);  border-color: #7f1d1d; background: #450a0a; }
+  .text-btn.warn:hover   { color: var(--warn); border-color: #78350f; background: #422006; }
 
   @media (max-width: 900px) {
     #columns { grid-template-columns: 1fr; }
-    #statusbar { grid-template-columns: 1fr 1fr; }
-    .sb-cell:nth-child(2n) { border-right: none; }
+    #statusbar { grid-template-columns: repeat(2, 1fr); }
   }
 </style>
 </head>
@@ -297,9 +297,9 @@
 
   <div id="topbar">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 148 44" width="111" height="33">
-      <polyline points="8,6 22,22 8,38"  fill="none" stroke="#1a1917" stroke-width="2.5" stroke-linejoin="miter" stroke-linecap="square"/>
+      <polyline points="8,6 22,22 8,38"  fill="none" stroke="#fafafa" stroke-width="2.5" stroke-linejoin="miter" stroke-linecap="square"/>
       <polyline points="20,6 34,22 20,38" fill="none" stroke="#5a7a95" stroke-width="2.5" stroke-linejoin="miter" stroke-linecap="square"/>
-      <text x="50" y="29" font-family="'JetBrains Mono','IBM Plex Mono','Courier New',monospace" font-size="18" font-weight="700" fill="#1a1917" letter-spacing="0.12em">RELAY</text>
+      <text x="50" y="29" font-family="'Geist','system-ui',sans-serif" font-size="18" font-weight="700" fill="#fafafa" letter-spacing="0.12em">RELAY</text>
     </svg>
   </div>
 
@@ -322,28 +322,27 @@
     </div>
     <div class="sb-cell">
       <span class="sb-label">Title</span>
-      <span class="sb-value" id="title-val" style="font-size:1em;font-weight:400;color:var(--muted)">—</span>
+      <span class="sb-value" id="title-val" style="font-size:14px;font-weight:400;color:var(--muted);font-family:'Geist',sans-serif">—</span>
     </div>
   </div>
 
   <div id="columns">
     <div id="chat-section">
       <div class="section-header">
-        <span><span class="arrow">→</span>Chat monitor</span>
+        <span>Chat monitor</span>
         <button class="text-btn danger" id="clear-chat-btn">Clear all</button>
       </div>
       <div id="chat-log"></div>
       <div class="admin-send-row">
         <input class="admin-msg-input" id="admin-msg" placeholder="Send as [admin]..." maxlength="300">
-        <button class="admin-send-btn" id="admin-send-btn">→ Send</button>
+        <button class="admin-send-btn" id="admin-send-btn">Send →</button>
       </div>
     </div>
 
     <div id="col-right">
 
-      <!-- Monitor: two preview players -->
       <div>
-        <div class="section-header"><span class="arrow">→</span>Monitor</div>
+        <div class="section-header">Monitor</div>
         <div id="preview-row">
           <div class="preview-pane">
             <div class="preview-label">Camera</div>
@@ -362,11 +361,10 @@
         </div>
       </div>
 
-      <!-- Sparkline -->
       <div style="border-top: 1px solid var(--border)">
         <div class="section-header">
-          <span><span class="arrow">→</span>Bitrate · last 5 min</span>
-          <span id="sparkline-cur" style="color:var(--accent)">—</span>
+          <span>Bitrate · last 5 min</span>
+          <span id="sparkline-cur" style="color:var(--muted);font-family:'Geist Mono',monospace">—</span>
         </div>
         <div id="sparkline-body">
           <div id="sparkline-wrap">
@@ -377,16 +375,15 @@
         </div>
       </div>
 
-      <!-- Configuration -->
       <div style="border-top: 1px solid var(--border)">
-        <div class="section-header"><span class="arrow">→</span>Configuration</div>
+        <div class="section-header">Configuration</div>
         <div class="config-form">
           <div class="field-group">
             <label class="field-label">Stream title</label>
             <input class="field-input" id="cfg-title" type="text" placeholder="My Stream" spellcheck="false">
           </div>
           <div class="field-group">
-            <label class="field-label">Stream key → put this in the "Stream ID" field in OBS</label>
+            <label class="field-label">Stream key — paste into OBS Stream ID field</label>
             <div class="field-row">
               <input class="field-input key-mask" id="cfg-key" type="text" placeholder="XXXX-XXXX-XXXX" spellcheck="false" autocomplete="off">
               <button class="icon-btn" id="reveal-key-btn">Hide</button>
@@ -408,18 +405,17 @@
             <input class="field-input" id="cfg-ffmpeg" type="text" placeholder="-vf scale=1280:720" spellcheck="false">
           </div>
           <div class="save-row">
-            <button class="save-btn" id="save-cfg-btn">→ Save</button>
+            <button class="save-btn" id="save-cfg-btn">Save</button>
             <span class="save-status" id="save-status">Saved.</span>
           </div>
         </div>
       </div>
 
-      <!-- Stream control -->
       <div style="border-top: 1px solid var(--border)">
-        <div class="section-header"><span class="arrow">→</span>Stream control</div>
+        <div class="section-header">Stream control</div>
         <div class="control-row">
           <button class="text-btn warn" id="restart-stream-btn">Restart ingest</button>
-          <span style="color:var(--muted);font-size:11px">Kills and restarts the FFmpeg SRT listener</span>
+          <span style="color:var(--muted);font-size:12px">Kills and restarts the FFmpeg SRT listener</span>
         </div>
       </div>
 
@@ -427,7 +423,7 @@
   </div>
 
   <div class="section">
-    <div class="section-header"><span class="arrow">→</span>Recent sessions</div>
+    <div class="section-header">Recent sessions</div>
     <table id="session-table">
       <thead>
         <tr>
@@ -520,13 +516,10 @@
     return h;
   }
 
-  // Camera and viewer feeds are independent — poll separately so camera
-  // can be live even when OBS isn't streaming (and vice versa).
   function startCam()    { if (!camHls)    camHls    = makeHls(camVideo,    '/hls/camera/live.m3u8'); }
   function startViewer() { if (!viewerHls) viewerHls = makeHls(viewerVideo, '/hls/live.m3u8'); }
 
   function updatePreviews(isOnline) {
-    // Viewer preview tracks main stream status
     if (isOnline) {
       viewerOffline.classList.add('hidden');
       startViewer();
@@ -536,7 +529,6 @@
     }
   }
 
-  // Camera preview is always active — it self-manages via HLS.js error handling
   function initCameraPreview() {
     camHls = makeHls(camVideo, '/hls/camera/live.m3u8');
     if (!camHls) return;
@@ -544,7 +536,7 @@
       if (d.fatal && d.type === Hls.ErrorTypes.NETWORK_ERROR) {
         camOffline.classList.remove('hidden');
         camHls.destroy(); camHls = null;
-        setTimeout(initCameraPreview, 5000); // retry when camera comes online
+        setTimeout(initCameraPreview, 5000);
       }
     });
     camHls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -567,7 +559,7 @@
     sparkCur.textContent = cur > 0 ? Math.round(cur) + ' kbps' : '—';
 
     if (bitrateHistory.every(v => v === 0)) {
-      sparkSVG.innerHTML = `<line x1="0" y1="${H-1}" x2="${W}" y2="${H-1}" stroke="var(--border)" stroke-width="1" stroke-dasharray="3,3"/>`;
+      sparkSVG.innerHTML = `<line x1="0" y1="${H-1}" x2="${W}" y2="${H-1}" stroke="#27272a" stroke-width="1" stroke-dasharray="3,3"/>`;
       return;
     }
 
@@ -580,12 +572,12 @@
     sparkSVG.innerHTML = `
       <defs>
         <linearGradient id="sg" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#5a7a95" stop-opacity="0.18"/>
-          <stop offset="100%" stop-color="#5a7a95" stop-opacity="0"/>
+          <stop offset="5%"  stop-color="#fafafa" stop-opacity="0.15"/>
+          <stop offset="95%" stop-color="#fafafa" stop-opacity="0"/>
         </linearGradient>
       </defs>
       <polygon points="0,${H} ${pts} ${W},${H}" fill="url(#sg)"/>
-      <polyline points="${pts}" fill="none" stroke="#5a7a95" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+      <polyline points="${pts}" fill="none" stroke="#fafafa" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
     `;
   }
 
@@ -620,7 +612,7 @@
 
     row.innerHTML = `
       <span class="chat-ts">${tsStr}</span>
-      <span class="chat-user" style="color:${p.color||'var(--accent)'}">${esc(p.username)}</span>
+      <span class="chat-user" style="color:${p.color||'var(--muted)'}">${esc(p.username)}</span>
       <span class="chat-text">${esc(p.message)}</span>
       <span class="chat-actions">
         <button class="act-btn del" data-id="${p.id}">del</button>
