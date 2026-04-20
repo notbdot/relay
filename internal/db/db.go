@@ -4,7 +4,6 @@ package db
 
 import (
 	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -149,23 +148,16 @@ func (d *DB) SetConfig(key, value string) error {
 	return d.save()
 }
 
-func (d *DB) InitDefaults() (streamKey, adminToken string, isNew bool, err error) {
+func (d *DB) InitDefaults() (streamKey string, isNew bool, err error) {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
 	streamKey = d.data.Config["stream_key"]
-	adminToken = d.data.Config["admin_token"]
 
-	if streamKey == "" || adminToken == "" {
+	if streamKey == "" {
 		isNew = true
-		if streamKey == "" {
-			streamKey = randomKey()
-			d.data.Config["stream_key"] = streamKey
-		}
-		if adminToken == "" {
-			adminToken = randomHex(24)
-			d.data.Config["admin_token"] = adminToken
-		}
+		streamKey = randomKey()
+		d.data.Config["stream_key"] = streamKey
 		defaults := map[string]string{
 			"stream_title": "Live Stream",
 			"srt_port":     "9999",
@@ -179,11 +171,6 @@ func (d *DB) InitDefaults() (streamKey, adminToken string, isNew bool, err error
 		err = d.save()
 	}
 	return
-}
-
-func (d *DB) RegenerateAdminToken() (string, error) {
-	token := randomHex(24)
-	return token, d.SetConfig("admin_token", token)
 }
 
 // Chat operations
@@ -404,10 +391,3 @@ func randomKey() string {
 	return string(out)
 }
 
-func randomHex(n int) string {
-	b := make([]byte, n)
-	if _, err := rand.Read(b); err != nil {
-		panic(fmt.Sprintf("randomHex: %v", err))
-	}
-	return hex.EncodeToString(b)
-}

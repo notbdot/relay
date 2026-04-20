@@ -249,8 +249,7 @@ func (s *Server) adminPassword() string {
 	if s.deps.AdminPassword != "" {
 		return s.deps.AdminPassword
 	}
-	tok, _ := s.deps.DB.GetConfig("admin_token")
-	return tok
+	return "admin"
 }
 
 func (s *Server) isAdminAuthed(r *http.Request) bool {

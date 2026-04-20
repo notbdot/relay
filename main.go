@@ -20,11 +20,10 @@ import (
 const usage = `Relay — SRT live streaming server
 
 Commands:
-  relay serve              Start the streaming server
-  relay reset-admin-token  Regenerate and print the admin token
-  relay help               Show this help
+  relay serve   Start the streaming server
+  relay help    Show this help
 
-Configuration is loaded from sluice.yaml (if present), with environment
+Configuration is loaded from relay.yaml (if present), with environment
 variables taking precedence. See relay.yaml.example for all options.
 `
 
@@ -40,8 +39,6 @@ func main() {
 	switch cmd {
 	case "serve":
 		runServe()
-	case "reset-admin-token":
-		runResetAdminToken()
 	case "help", "--help", "-h":
 		fmt.Print(usage)
 	default:
@@ -62,24 +59,24 @@ func runServe() {
 	}
 	defer database.Close()
 
-	streamKey, adminToken, isNew, err := database.InitDefaults()
+	streamKey, isNew, err := database.InitDefaults()
 	if err != nil {
 		log.Fatalf("db init: %v", err)
 	}
 
+	adminPW := cfg.Server.AdminPassword
+	if adminPW == "" {
+		adminPW = "admin"
+	}
+
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 	if isNew {
-		fmt.Println("  First run — credentials generated")
-		fmt.Printf("  Stream key  : %s\n", streamKey)
-		fmt.Printf("  Admin token : %s\n", adminToken)
+		fmt.Println("  First run — stream key generated")
+		fmt.Printf("  Stream key : %s\n", streamKey)
 	}
+	fmt.Printf("  Admin password : %s\n", adminPW)
 	fmt.Printf("  Viewer → http://localhost:%d/\n", cfg.Server.Port)
 	fmt.Printf("  Admin  → http://localhost:%d/admin\n", cfg.Server.Port)
-	if isNew {
-		fmt.Printf("           (token shown above — save it!)\n")
-	} else {
-		fmt.Printf("           (use 'relay reset-admin-token' if locked out)\n")
-	}
 	fmt.Printf("  SRT (OBS) → srt://localhost:%d  (stream key in Stream ID)\n", cfg.SRT.Port)
 	fmt.Printf("  SRT (cam) → srt://localhost:%d  (stream key in Stream ID)\n", cfg.SRT.CameraPort)
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -150,23 +147,3 @@ func runServe() {
 	log.Println("shutdown complete")
 }
 
-func runResetAdminToken() {
-	cfg, err := config.Load("relay.yaml")
-	if err != nil {
-		log.Fatalf("config: %v", err)
-	}
-
-	database, err := db.Open(cfg.DB.Path)
-	if err != nil {
-		log.Fatalf("db: %v", err)
-	}
-	defer database.Close()
-
-	token, err := database.RegenerateAdminToken()
-	if err != nil {
-		log.Fatalf("regenerate: %v", err)
-	}
-
-	fmt.Printf("New admin token : %s\n", token)
-	fmt.Printf("Admin URL       : http://localhost:%d/admin?token=%s\n", cfg.Server.Port, token)
-}

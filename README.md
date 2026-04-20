@@ -28,19 +28,19 @@ cp relay.yaml.example relay.yaml
 docker compose up -d
 ```
 
-On first run, relay prints the generated stream key and admin token:
+On first run, relay prints the generated stream key:
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  First run — credentials generated
-  Stream key  : XXXX-XXXX-XXXX
-  Admin token : <48-char hex token>
+  First run — stream key generated
+  Stream key     : XXXX-XXXX-XXXX
+  Admin password : admin
   Viewer → http://localhost:2935/
   Admin  → http://localhost:2935/admin
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-Save both. The stream key goes in OBS. The admin token is your password at `/admin`.
+The stream key goes in OBS. The default admin password is `admin` — set `admin_password` in `relay.yaml` before exposing to the internet.
 
 ## Updating
 
@@ -75,9 +75,7 @@ Configuration is loaded from `relay.yaml` (if present). Environment variables ov
 server:
   host: "0.0.0.0"
   port: 2935              # RELAY_SERVER_PORT
-  # admin_password: "mypassword"  # RELAY_ADMIN_PASSWORD
-  #   If set, replaces the random token for admin auth.
-  #   Useful when you need to log in from a new device mid-stream.
+  admin_password: "admin"  # RELAY_ADMIN_PASSWORD — change before exposing to the internet
 
 srt:
   port: 9999              # RELAY_SRT_PORT
@@ -99,9 +97,8 @@ ffmpeg:
 ## CLI
 
 ```
-relay serve              Start the streaming server (default)
-relay reset-admin-token  Generate a new admin token and print it
-relay help               Show help
+relay serve   Start the streaming server (default)
+relay help    Show help
 ```
 
 ## Building from source
