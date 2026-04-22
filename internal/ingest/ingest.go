@@ -228,14 +228,54 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 		scanner.Buffer(make([]byte, 256*1024), 1024*1024) // verbose FFmpeg lines can exceed default 4096
 		scanner.Split(scanLines)
 		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.Contains(line, "bitrate") {
-				log.Printf("ingest[debug]: %s", line)
-			}
-			mgr.parseLine(line, &connected, &streamIDChecked, cancel)
+			mgr.parseLine(scanner.Text(), &connected, &streamIDChecked, cancel)
 		}
 		if err := scanner.Err(); err != nil {
 			log.Printf("ingest: scanner error: %v", err)
+		}
+	}()
+
+	// Measure bitrate from segment file growth. FFmpeg HLS output does not
+	// accumulate total_size across segments so -progress always reports N/A.
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		defer ticker.Stop()
+		seenSizes := make(map[string]int64)
+		for {
+			select {
+			case <-cmdCtx.Done():
+				return
+			case <-ticker.C:
+				entries, err := os.ReadDir(mgr.segmentsDir)
+				if err != nil {
+					continue
+				}
+				var newBytes int64
+				current := make(map[string]struct{}, len(entries))
+				for _, e := range entries {
+					if !strings.HasSuffix(e.Name(), ".ts") {
+						continue
+					}
+					info, err := e.Info()
+					if err != nil {
+						continue
+					}
+					current[e.Name()] = struct{}{}
+					prev := seenSizes[e.Name()]
+					if info.Size() > prev {
+						newBytes += info.Size() - prev
+					}
+					seenSizes[e.Name()] = info.Size()
+				}
+				for name := range seenSizes {
+					if _, ok := current[name]; !ok {
+						delete(seenSizes, name)
+					}
+				}
+				if newBytes > 0 {
+					mgr.setKbps(float64(newBytes*8) / 1000.0)
+				}
+			}
 		}
 	}()
 
