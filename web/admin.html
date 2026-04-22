@@ -434,6 +434,10 @@
         </div>
         <div id="obs-connect-form" class="config-form">
           <div class="field-group">
+            <label class="field-label">OBS WebSocket URL</label>
+            <input class="field-input" id="obs-url" type="text" value="ws://localhost:4455" spellcheck="false" placeholder="ws://192.168.x.x:4455">
+          </div>
+          <div class="field-group">
             <label class="field-label">Password</label>
             <input class="field-input" id="obs-password" type="password" placeholder="(leave blank if none)">
           </div>
@@ -702,11 +706,14 @@
   const cfgFFmpeg  = document.getElementById('cfg-ffmpeg');
   const cfgQuality = document.getElementById('cfg-quality');
 
+  const obsUrlEl = document.getElementById('obs-url');
+
   fetch('/api/admin/config').then(r => r.json()).then(d => {
     if (d.stream_title)   cfgTitle.value   = d.stream_title;
     if (d.stream_key)     cfgKey.value     = d.stream_key;
     if (d.ffmpeg_flags)   cfgFFmpeg.value  = d.ffmpeg_flags;
     if (d.quality_preset) cfgQuality.value = d.quality_preset;
+    if (d.obs_ws_url)     obsUrlEl.value   = d.obs_ws_url;
   }).catch(() => {});
 
   document.getElementById('reveal-key-btn').addEventListener('click', function() {
@@ -727,6 +734,7 @@
       stream_title:   cfgTitle.value.trim(),
       ffmpeg_flags:   cfgFFmpeg.value.trim(),
       quality_preset: cfgQuality.value,
+      obs_ws_url:     obsUrlEl.value.trim(),
     };
     if (cfgKey.value.trim()) body.stream_key = cfgKey.value.trim();
     post('/api/admin/config', body).then(() => {
@@ -790,6 +798,7 @@
     const obsCallbacks = {};
 
     const obsPassEl     = document.getElementById('obs-password');
+    const obsUrlInput   = document.getElementById('obs-url');
     const obsErrorEl    = document.getElementById('obs-error');
     const obsConnectBtn = document.getElementById('obs-connect-btn');
     const obsStreamBtn  = document.getElementById('obs-stream-btn');
@@ -868,6 +877,8 @@
 
     async function obsConnect() {
       const password = obsPassEl.value;
+      // persist the URL via config save so the proxy uses it
+      post('/api/admin/config', { obs_ws_url: obsUrlInput.value.trim() }).catch(() => {});
       obsConnectBtn.textContent = 'Connecting…';
       obsConnectBtn.disabled = true;
       obsErrorEl.textContent = '';

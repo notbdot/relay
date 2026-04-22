@@ -392,6 +392,7 @@ func (s *Server) apiAdminConfig(w http.ResponseWriter, r *http.Request) {
 		MusicBRB         string `json:"music_brb"`
 		MusicEnding      string `json:"music_ending"`
 		ScreensaverURLs  string `json:"screensaver_urls"`
+		OBSWebSocketURL  string `json:"obs_ws_url"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
@@ -423,6 +424,7 @@ func (s *Server) apiAdminConfig(w http.ResponseWriter, r *http.Request) {
 	_ = s.deps.DB.SetConfig("music_brb", body.MusicBRB)
 	_ = s.deps.DB.SetConfig("music_ending", body.MusicEnding)
 	_ = s.deps.DB.SetConfig("screensaver_urls", body.ScreensaverURLs)
+	_ = s.deps.DB.SetConfig("obs_ws_url", body.OBSWebSocketURL)
 
 	if needsRestart {
 		s.deps.Ingest.Restart()
@@ -445,17 +447,19 @@ func (s *Server) apiAdminConfigGet(w http.ResponseWriter, r *http.Request) {
 	musicBRB, _ := s.deps.DB.GetConfig("music_brb")
 	musicEnding, _ := s.deps.DB.GetConfig("music_ending")
 	screensaverURLs, _ := s.deps.DB.GetConfig("screensaver_urls")
+	obsWsURL, _ := s.deps.DB.GetConfig("obs_ws_url")
 	jsonResp(w, map[string]string{
-		"stream_title":       title,
-		"stream_key":         key,
-		"ffmpeg_flags":       flags,
-		"srt_port":           srtPort,
-		"quality_preset":     qualityPreset,
-		"scene":              scene,
+		"stream_title":        title,
+		"stream_key":          key,
+		"ffmpeg_flags":        flags,
+		"srt_port":            srtPort,
+		"quality_preset":      qualityPreset,
+		"scene":               scene,
 		"music_starting_soon": musicStartingSoon,
-		"music_brb":          musicBRB,
-		"music_ending":       musicEnding,
-		"screensaver_urls":   screensaverURLs,
+		"music_brb":           musicBRB,
+		"music_ending":        musicEnding,
+		"screensaver_urls":    screensaverURLs,
+		"obs_ws_url":          obsWsURL,
 	})
 }
 
@@ -641,7 +645,10 @@ func (s *Server) obsWSProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	target := s.deps.OBSWebSocketURL
+	target, _ := s.deps.DB.GetConfig("obs_ws_url")
+	if target == "" {
+		target = s.deps.OBSWebSocketURL
+	}
 	if target == "" {
 		target = "ws://localhost:4455"
 	}
