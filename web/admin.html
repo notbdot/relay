@@ -808,6 +808,9 @@
     const obsForm       = document.getElementById('obs-connect-form');
     const obsControls   = document.getElementById('obs-controls');
 
+    const savedPass = localStorage.getItem('obs_password');
+    if (savedPass) obsPassEl.value = savedPass;
+
     async function sha256b64(str) {
       const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
       return btoa(String.fromCharCode(...new Uint8Array(buf)));
@@ -877,6 +880,7 @@
 
     async function obsConnect() {
       const password = obsPassEl.value;
+      localStorage.setItem('obs_password', password);
       // persist the URL via config save so the proxy uses it
       post('/api/admin/config', { obs_ws_url: obsUrlInput.value.trim() }).catch(() => {});
       obsConnectBtn.textContent = 'Connecting…';
