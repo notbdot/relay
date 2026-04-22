@@ -286,6 +286,14 @@
   .text-btn.danger:hover { color: var(--err);  border-color: #7f1d1d; background: #450a0a; }
   .text-btn.warn:hover   { color: var(--warn); border-color: #78350f; background: #422006; }
 
+  /* --- OBS --- */
+  .obs-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--muted2); transition: background 200ms; }
+  .obs-dot.live { background: var(--live); }
+  .obs-controls { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .obs-btn-row { display: flex; gap: 8px; }
+  .obs-btn-row .text-btn { flex: 1; }
+  .d-none { display: none !important; }
+
   @media (max-width: 900px) {
     #columns { grid-template-columns: 1fr; }
     #statusbar { grid-template-columns: repeat(2, 1fr); }
@@ -416,6 +424,42 @@
         <div class="control-row">
           <button class="text-btn warn" id="restart-stream-btn">Restart ingest</button>
           <span style="color:var(--muted);font-size:12px">Kills and restarts the FFmpeg SRT listener</span>
+        </div>
+      </div>
+
+      <div style="border-top: 1px solid var(--border)">
+        <div class="section-header">
+          <span>OBS Control</span>
+          <span id="obs-dot" class="obs-dot"></span>
+        </div>
+        <div id="obs-connect-form" class="config-form">
+          <div class="field-group">
+            <label class="field-label">Host</label>
+            <input class="field-input" id="obs-host" type="text" value="localhost" spellcheck="false">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Port</label>
+            <input class="field-input" id="obs-port" type="number" value="4455">
+          </div>
+          <div class="field-group">
+            <label class="field-label">Password</label>
+            <input class="field-input" id="obs-password" type="password" placeholder="(leave blank if none)">
+          </div>
+          <div class="save-row">
+            <button class="save-btn" id="obs-connect-btn">Connect</button>
+            <span class="save-status" id="obs-error" style="color:var(--err)"></span>
+          </div>
+        </div>
+        <div id="obs-controls" class="obs-controls d-none">
+          <div class="obs-btn-row">
+            <button class="text-btn" id="obs-stream-btn">Start Stream</button>
+            <button class="text-btn" id="obs-record-btn">Start Record</button>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Scene</label>
+            <select class="field-input" id="obs-scene-select"></select>
+          </div>
+          <button class="text-btn" id="obs-disconnect-btn">Disconnect</button>
         </div>
       </div>
 
@@ -746,6 +790,152 @@
     }
     return out;
   }
+
+  // --- OBS WebSocket (v5 protocol) ---
+  (function() {
+    let obsWs = null, obsConnected = false, obsStreaming = false, obsRecording = false;
+    let obsReqId = 0;
+    const obsCallbacks = {};
+
+    const obsHostEl     = document.getElementById('obs-host');
+    const obsPortEl     = document.getElementById('obs-port');
+    const obsPassEl     = document.getElementById('obs-password');
+    const obsErrorEl    = document.getElementById('obs-error');
+    const obsConnectBtn = document.getElementById('obs-connect-btn');
+    const obsStreamBtn  = document.getElementById('obs-stream-btn');
+    const obsRecordBtn  = document.getElementById('obs-record-btn');
+    const obsSceneSel   = document.getElementById('obs-scene-select');
+    const obsDot        = document.getElementById('obs-dot');
+    const obsForm       = document.getElementById('obs-connect-form');
+    const obsControls   = document.getElementById('obs-controls');
+
+    const sh = localStorage.getItem('obs_host'), sp = localStorage.getItem('obs_port');
+    if (sh) obsHostEl.value = sh;
+    if (sp) obsPortEl.value = sp;
+
+    async function sha256b64(str) {
+      const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+      return btoa(String.fromCharCode(...new Uint8Array(buf)));
+    }
+
+    function obsSend(op, data) {
+      if (obsWs && obsWs.readyState === WebSocket.OPEN)
+        obsWs.send(JSON.stringify({ op, d: data }));
+    }
+
+    function obsRequest(type, data, cb) {
+      const id = String(++obsReqId);
+      if (cb) obsCallbacks[id] = cb;
+      obsSend(6, { requestType: type, requestId: id, requestData: data || {} });
+    }
+
+    function obsSetState(connected) {
+      obsConnected = connected;
+      obsDot.classList.toggle('live', connected);
+      obsForm.classList.toggle('d-none', connected);
+      obsControls.classList.toggle('d-none', !connected);
+      obsErrorEl.textContent = '';
+    }
+
+    function obsSetStreaming(active) {
+      obsStreaming = active;
+      obsStreamBtn.textContent = active ? 'Stop Stream' : 'Start Stream';
+      obsStreamBtn.classList.toggle('danger', active);
+    }
+
+    function obsSetRecording(active) {
+      obsRecording = active;
+      obsRecordBtn.textContent = active ? 'Stop Record' : 'Start Record';
+      obsRecordBtn.classList.toggle('danger', active);
+    }
+
+    function obsPopulateScenes(scenes, current) {
+      obsSceneSel.innerHTML = '';
+      [...scenes].reverse().forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.sceneName;
+        opt.textContent = s.sceneName;
+        if (s.sceneName === current) opt.selected = true;
+        obsSceneSel.appendChild(opt);
+      });
+    }
+
+    function obsOnIdentified() {
+      obsSetState(true);
+      obsRequest('GetStreamStatus', {}, d => { if (d) obsSetStreaming(d.outputActive); });
+      obsRequest('GetRecordStatus', {}, d => { if (d) obsSetRecording(d.outputActive); });
+      obsRequest('GetSceneList', {}, d => {
+        if (d) obsPopulateScenes(d.scenes, d.currentProgramSceneName);
+      });
+    }
+
+    function obsHandleEvent(type, data) {
+      if      (type === 'StreamStateChanged')          obsSetStreaming(data.outputActive);
+      else if (type === 'RecordStateChanged')           obsSetRecording(data.outputActive);
+      else if (type === 'CurrentProgramSceneChanged')   obsSceneSel.value = data.sceneName;
+      else if (type === 'SceneListChanged') {
+        obsRequest('GetSceneList', {}, d => {
+          if (d) obsPopulateScenes(d.scenes, obsSceneSel.value || d.currentProgramSceneName);
+        });
+      }
+    }
+
+    async function obsConnect() {
+      const host = obsHostEl.value.trim() || 'localhost';
+      const port = obsPortEl.value.trim() || '4455';
+      const password = obsPassEl.value;
+      localStorage.setItem('obs_host', host);
+      localStorage.setItem('obs_port', port);
+
+      obsConnectBtn.textContent = 'Connecting…';
+      obsConnectBtn.disabled = true;
+      obsErrorEl.textContent = '';
+
+      if (obsWs) { obsWs.close(); obsWs = null; }
+      obsWs = new WebSocket(`ws://${host}:${port}`);
+
+      obsWs.addEventListener('message', async e => {
+        const { op, d } = JSON.parse(e.data);
+        if (op === 0) { // Hello
+          let auth;
+          if (d.authentication && password) {
+            const secret = await sha256b64(password + d.authentication.salt);
+            auth = await sha256b64(secret + d.authentication.challenge);
+          }
+          obsSend(1, { rpcVersion: 1, ...(auth ? { authentication: auth } : {}) });
+        } else if (op === 2) { // Identified
+          obsConnectBtn.textContent = 'Connect';
+          obsConnectBtn.disabled = false;
+          obsOnIdentified();
+        } else if (op === 5) { // Event
+          obsHandleEvent(d.eventType, d.eventData || {});
+        } else if (op === 7) { // RequestResponse
+          const cb = obsCallbacks[d.requestId];
+          if (cb) { delete obsCallbacks[d.requestId]; cb(d.requestStatus.result ? (d.responseData || {}) : null); }
+        }
+      });
+
+      obsWs.addEventListener('close', () => {
+        obsConnectBtn.textContent = 'Connect';
+        obsConnectBtn.disabled = false;
+        obsSetState(false);
+      });
+
+      obsWs.addEventListener('error', () => {
+        obsErrorEl.textContent = 'Could not connect';
+        obsConnectBtn.textContent = 'Connect';
+        obsConnectBtn.disabled = false;
+      });
+    }
+
+    obsConnectBtn.addEventListener('click', obsConnect);
+    document.getElementById('obs-disconnect-btn').addEventListener('click', () => {
+      if (obsWs) { obsWs.close(); obsWs = null; }
+    });
+    obsStreamBtn.addEventListener('click', () => obsRequest(obsStreaming ? 'StopStream' : 'StartStream', {}));
+    obsRecordBtn.addEventListener('click', () => obsRequest(obsRecording ? 'StopRecord' : 'StartRecord', {}));
+    obsSceneSel.addEventListener('change', e => obsRequest('SetCurrentProgramScene', { sceneName: e.target.value }));
+  })();
 
   drawSparkline();
 })();
