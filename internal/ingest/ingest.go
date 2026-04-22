@@ -226,6 +226,7 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 
 	go func() {
 		scanner := bufio.NewScanner(stderr)
+		scanner.Buffer(make([]byte, 256*1024), 1024*1024) // verbose FFmpeg lines can exceed default 4096
 		scanner.Split(scanLines)
 		for scanner.Scan() {
 			mgr.parseLine(scanner.Text(), &connected, &streamIDChecked, cancel)
