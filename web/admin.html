@@ -434,14 +434,6 @@
         </div>
         <div id="obs-connect-form" class="config-form">
           <div class="field-group">
-            <label class="field-label">Host</label>
-            <input class="field-input" id="obs-host" type="text" value="localhost" spellcheck="false">
-          </div>
-          <div class="field-group">
-            <label class="field-label">Port</label>
-            <input class="field-input" id="obs-port" type="number" value="4455">
-          </div>
-          <div class="field-group">
             <label class="field-label">Password</label>
             <input class="field-input" id="obs-password" type="password" placeholder="(leave blank if none)">
           </div>
@@ -797,8 +789,6 @@
     let obsReqId = 0;
     const obsCallbacks = {};
 
-    const obsHostEl     = document.getElementById('obs-host');
-    const obsPortEl     = document.getElementById('obs-port');
     const obsPassEl     = document.getElementById('obs-password');
     const obsErrorEl    = document.getElementById('obs-error');
     const obsConnectBtn = document.getElementById('obs-connect-btn');
@@ -808,10 +798,6 @@
     const obsDot        = document.getElementById('obs-dot');
     const obsForm       = document.getElementById('obs-connect-form');
     const obsControls   = document.getElementById('obs-controls');
-
-    const sh = localStorage.getItem('obs_host'), sp = localStorage.getItem('obs_port');
-    if (sh) obsHostEl.value = sh;
-    if (sp) obsPortEl.value = sp;
 
     async function sha256b64(str) {
       const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
@@ -881,18 +867,14 @@
     }
 
     async function obsConnect() {
-      const host = obsHostEl.value.trim() || 'localhost';
-      const port = obsPortEl.value.trim() || '4455';
       const password = obsPassEl.value;
-      localStorage.setItem('obs_host', host);
-      localStorage.setItem('obs_port', port);
-
       obsConnectBtn.textContent = 'Connecting…';
       obsConnectBtn.disabled = true;
       obsErrorEl.textContent = '';
 
       if (obsWs) { obsWs.close(); obsWs = null; }
-      obsWs = new WebSocket(`ws://${host}:${port}`);
+      const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+      obsWs = new WebSocket(`${proto}://${location.host}/obs-ws`);
 
       obsWs.addEventListener('message', async e => {
         const { op, d } = JSON.parse(e.data);

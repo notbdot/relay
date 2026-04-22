@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/notbdot/relay/internal/db"
 	"github.com/notbdot/relay/internal/hub"
 	"github.com/notbdot/relay/internal/ingest"
@@ -24,7 +25,8 @@ type Deps struct {
 	Hub           *hub.Hub
 	Ingest        *ingest.Manager
 	SegmentsDir   string
-	AdminPassword string // if set, used instead of DB token for admin auth
+	AdminPassword   string // if set, used instead of DB token for admin auth
+	OBSWebSocketURL string // proxy target for /obs-ws (default ws://localhost:4455)
 	// embed fs for static files
 	ViewerHTML  []byte
 	AdminHTML   []byte
@@ -75,6 +77,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/admin/stream/restart", s.requireAdmin(s.apiStreamRestart))
 	s.mux.HandleFunc("GET /api/admin/sessions", s.requireAdmin(s.apiSessions))
 	s.mux.HandleFunc("GET /api/admin/chat/all", s.requireAdmin(s.apiAllChat))
+	s.mux.HandleFunc("GET /obs-ws", s.obsWSProxy)
 }
 
 func (s *Server) Start(ctx context.Context) error {
@@ -629,6 +632,53 @@ func (s *Server) handleChatMessage(c *hub.Client, username, message string) {
 func (s *Server) handleAdminCommand(c *hub.Client, msgType string, payload json.RawMessage) {
 	// Admin can send commands via WS too; not used for now, handled via REST
 }
+
+// obsWSProxy proxies WebSocket frames between the admin browser and OBS WebSocket.
+// This lets the admin page connect via wss:// (same origin) avoiding mixed-content issues.
+func (s *Server) obsWSProxy(w http.ResponseWriter, r *http.Request) {
+	if !s.isAdminAuthed(r) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	target := s.deps.OBSWebSocketURL
+	if target == "" {
+		target = "ws://localhost:4455"
+	}
+
+	obsConn, _, err := websocket.DefaultDialer.Dial(target, nil)
+	if err != nil {
+		http.Error(w, "OBS unavailable", http.StatusBadGateway)
+		return
+	}
+	defer obsConn.Close()
+
+	u := websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
+	clientConn, err := u.Upgrade(w, r, nil)
+	if err != nil {
+		return
+	}
+	defer clientConn.Close()
+
+	errc := make(chan error, 2)
+	pipe := func(dst, src *websocket.Conn) {
+		for {
+			mt, msg, err := src.ReadMessage()
+			if err != nil {
+				errc <- err
+				return
+			}
+			if err := dst.WriteMessage(mt, msg); err != nil {
+				errc <- err
+				return
+			}
+		}
+	}
+	go pipe(clientConn, obsConn)
+	go pipe(obsConn, clientConn)
+	<-errc
+}
+
 
 
 // Helpers

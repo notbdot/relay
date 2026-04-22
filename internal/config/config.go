@@ -16,9 +16,10 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Host          string `yaml:"host"`
-	Port          int    `yaml:"port"`
-	AdminPassword string `yaml:"admin_password"`
+	Host             string `yaml:"host"`
+	Port             int    `yaml:"port"`
+	AdminPassword    string `yaml:"admin_password"`
+	OBSWebSocketURL  string `yaml:"obs_websocket_url"`
 }
 
 type SRTConfig struct {
@@ -69,6 +70,9 @@ func Load(path string) (*Config, error) {
 	}
 	if v := os.Getenv("RELAY_ADMIN_PASSWORD"); v != "" {
 		cfg.Server.AdminPassword = v
+	}
+	if v := os.Getenv("RELAY_OBS_WS_URL"); v != "" {
+		cfg.Server.OBSWebSocketURL = v
 	}
 	if v := os.Getenv("RELAY_SRT_PORT"); v != "" {
 		if p, err := strconv.Atoi(v); err == nil {

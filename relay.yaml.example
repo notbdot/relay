@@ -5,7 +5,8 @@
 server:
   host: "0.0.0.0"
   port: 2935          # RELAY_SERVER_PORT
-  # admin_password: "yourpassword"  # RELAY_ADMIN_PASSWORD — if set, use this instead of the random token
+  admin_password: "admin"           # RELAY_ADMIN_PASSWORD
+  # obs_websocket_url: "ws://localhost:4455"  # RELAY_OBS_WS_URL — OBS WebSocket proxy target
 
 srt:
   port: 9999          # RELAY_SRT_PORT
