@@ -178,6 +178,8 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 	args := []string{
 		"-y",
 		"-loglevel", "verbose",
+		"-stats",           // force stats line even when stderr is piped (not a TTY)
+		"-stats_period", "1",
 		"-fflags", "nobuffer",
 		"-probesize", "1000000",
 		"-analyzeduration", "1000000",
