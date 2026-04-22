@@ -228,7 +228,14 @@ func (mgr *Manager) runFFmpeg(ctx context.Context) {
 		scanner.Buffer(make([]byte, 256*1024), 1024*1024) // verbose FFmpeg lines can exceed default 4096
 		scanner.Split(scanLines)
 		for scanner.Scan() {
-			mgr.parseLine(scanner.Text(), &connected, &streamIDChecked, cancel)
+			line := scanner.Text()
+			if strings.Contains(line, "bitrate") {
+				log.Printf("ingest[debug]: %s", line)
+			}
+			mgr.parseLine(line, &connected, &streamIDChecked, cancel)
+		}
+		if err := scanner.Err(); err != nil {
+			log.Printf("ingest: scanner error: %v", err)
 		}
 	}()
 
