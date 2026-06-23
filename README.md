@@ -9,6 +9,14 @@ Self-hosted SRT live streaming server. Accepts an OBS stream over SRT, transcode
 
 > **Built by GitHub Actions** — multi-arch (amd64, arm64) Docker images are automatically built and pushed to [`ghcr.io/notbdot/relay`](https://github.com/notbdot/relay/pkgs/container/relay) on every push to `main`.
 
+## Screenshots
+
+### Admin panel
+![Relay admin panel — stat cards, live monitor, bitrate sparkline, configuration](docs/screenshots/admin.png)
+
+### Viewer
+![Relay viewer — live video player with chat panel](docs/screenshots/viewer.png)
+
 ## Quick start (Docker)
 
 Pull the pre-built image and run it — no build step required:
