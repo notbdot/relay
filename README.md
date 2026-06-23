@@ -1,6 +1,27 @@
 <img src="brand/logo.svg" alt="Relay" width="148"><br><br>
 
+[![CI](https://img.shields.io/github/actions/workflow/status/notbdot/relay/docker.yml?label=build&logo=github)](https://github.com/notbdot/relay/actions/workflows/docker.yml)
+[![Docker Image](https://img.shields.io/badge/ghcr.io-notbdot%2Frelay-blue?logo=docker)](https://github.com/notbdot/relay/pkgs/container/relay)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/notbdot/relay)](https://goreportcard.com/report/github.com/notbdot/relay)
+
 Self-hosted SRT live streaming server. Accepts an OBS stream over SRT, transcodes to HLS, and serves a viewer page with live chat. Built as a single Go binary with no database dependencies.
+
+> **Built by GitHub Actions** — multi-arch (amd64, arm64) Docker images are automatically built and pushed to [`ghcr.io/notbdot/relay`](https://github.com/notbdot/relay/pkgs/container/relay) on every push to `main`.
+
+## Quick start (Docker)
+
+Pull the pre-built image and run it — no build step required:
+
+```bash
+docker run -d \
+  --name relay \
+  --network host \
+  --restart unless-stopped \
+  -v $(pwd)/relay.yaml:/etc/relay.yaml:ro \
+  -v $(pwd)/segments:/segments \
+  ghcr.io/notbdot/relay:latest
+```
 
 ## Features
 
@@ -14,7 +35,9 @@ Self-hosted SRT live streaming server. Accepts an OBS stream over SRT, transcode
 - **Persistent storage** — JSON file, no database required
 - **Single binary** — ships as a self-contained binary; Docker image includes FFmpeg
 
-## Quick start (Docker)
+## Quick start (Docker Compose)
+
+Use the docker-compose file for the standard setup:
 
 ```bash
 # 1. grab the compose file
